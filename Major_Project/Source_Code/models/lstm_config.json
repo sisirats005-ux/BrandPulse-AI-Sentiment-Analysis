@@ -1,0 +1,9 @@
+{
+  "max_len": 50,
+  "vocab_size": 20000,
+  "classes": [
+    "negative",
+    "neutral",
+    "positive"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "project": "BrandPulse AI",
+  "dataset": "Twitter US Airline Sentiment",
+  "dataset_size": 14619,
+  "train_test_split": "80/20 (stratified)",
+  "random_state": 42,
+  "class_distribution": {
+    "negative": 0.6275,
+    "neutral": 0.2111,
+    "positive": 0.1614
+  },
+  "models": {
+    "logistic_regression": {
+      "display_name": "TF-IDF + Logistic Regression",
+      "accuracy": 0.7736,
+      "macro_f1": 0.7235,
+      "weighted_f1": 0.7784,
+      "per_class_f1": {
+        "negative": 0.854,
+        "neutral": 0.6048,
+        "positive": 0.7116
+      },
+      "approx_training_time_seconds": 2,
+      "approx_model_size_mb": 0.89,
+      "inference_time_seconds_for_test_set": 0.153,
+      "test_set_size": 2924
+    },
+    "bilstm": {
+      "display_name": "Bidirectional LSTM",
+      "accuracy": 0.8003,
+      "macro_f1": 0.7378,
+      "weighted_f1": 0.7974,
+      "per_class_f1": {
+        "negative": 0.8801,
+        "neutral": 0.6024,
+        "positive": 0.7308
+      },
+      "approx_training_time_seconds": 100,
+      "approx_model_size_mb": 32.46,
+      "inference_time_seconds_for_test_set": 2.752,
+      "test_set_size": 2924
+    }
+  }
+}

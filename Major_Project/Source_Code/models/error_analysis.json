@@ -1,0 +1,789 @@
+{
+  "classes": [
+    "negative",
+    "neutral",
+    "positive"
+  ],
+  "models": {
+    "logistic_regression": {
+      "confusion_matrix": [
+        [
+          1515,
+          242,
+          78
+        ],
+        [
+          142,
+          404,
+          71
+        ],
+        [
+          56,
+          73,
+          343
+        ]
+      ],
+      "top_confusion_pairs": {
+        "negative -> neutral": 242,
+        "neutral -> negative": 142,
+        "negative -> positive": 78,
+        "positive -> neutral": 73,
+        "neutral -> positive": 71,
+        "positive -> negative": 56
+      },
+      "misclassified_examples": [
+        {
+          "tweet": "@JetBlue ha ha! Can I get a wake up call at boarding time please?  Large coffee, extralight extra sweet please!",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.404
+        },
+        {
+          "tweet": "@AmericanAir I wish I could remember all of their names!",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.501
+        },
+        {
+          "tweet": "@JetBlue actually flight 1089 not 1098",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.802
+        },
+        {
+          "tweet": "@JetBlue app just reminded me I will be flying to #FLL in 2 weeks. #ChillyCVZ #ThankGoodness @mypompanobeach #family #friends #sunshine",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.46
+        },
+        {
+          "tweet": "@USAirways thank you.3860 to cincy.just landed.you should add frequent flyer miles to my account..  a long, incredibly frustrating day",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.421
+        },
+        {
+          "tweet": "@united empathizes w/ my disappointment that 1stClass flight w/nonworking entertainmnt is worth $50. #UnFriendlySkies http://t.co/lOecO4gmvd",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.493
+        },
+        {
+          "tweet": "@USAirways we even offered to fly in to another airport and they said they couldn't do that. No explanation why they can't.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.825
+        },
+        {
+          "tweet": "@united I was. But I have given up.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.533
+        },
+        {
+          "tweet": "@USAirways your chairmans phone is down. what other number can i use?",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.748
+        },
+        {
+          "tweet": "@USAirways I just checked in online for tomorrow's flight - thought I should get auto upgrade? (Already got the email saying no seats)",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.704
+        },
+        {
+          "tweet": "@AmericanAir @USAirways \"but I take meds that make me severely dehydrated\" {sigh}",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.462
+        },
+        {
+          "tweet": "@united, I booked our flights w/ @WestJet. I saw the same prices each time I searched. It wasn't the least bit frustrating. #customerservice",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.426
+        },
+        {
+          "tweet": "@SouthwestAir Are we sure flights will not be Cancelled Flighted after 1200 I am trying to make plans in STL",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.768
+        },
+        {
+          "tweet": "@united The only thing you fella have done right today is get me to the pacific time zone.",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.657
+        },
+        {
+          "tweet": "@united I trust you enough to put my coat in my checked bag!",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.675
+        },
+        {
+          "tweet": "@united How long can I expect the formal response to take?",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.621
+        },
+        {
+          "tweet": "@AmericanAir Priority baggage evidently means it comes out last",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.537
+        },
+        {
+          "tweet": "@VirginAmerica got it squared away. Someone picked up as soon as I tweeted. Should have tweeted sooner. \ud83d\ude09",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.487
+        },
+        {
+          "tweet": "@united you left my bag in Houston last night. It's freezing cold in Memphis. Any idea on when I will see it? Off again tomorrow.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.471
+        },
+        {
+          "tweet": "@SouthwestAir great now we are all de boarding perfectly plane is shot. Fml. Plans are screwed. Thanks for nothing @SouthwestAir",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.603
+        },
+        {
+          "tweet": "@JetBlue what's up with the random delay on flight 1729? Any chance of it being a false alarm?",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.576
+        },
+        {
+          "tweet": "@AmericanAir sorry so Late Flight, responded to your DM.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.503
+        },
+        {
+          "tweet": "@SouthwestAir same here. Would appreciate a follow so I can DM my info to figure out what I am supposed to do.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.664
+        },
+        {
+          "tweet": "@SouthwestAir Please update your website",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.567
+        },
+        {
+          "tweet": "@USAirways Expedia reserved a ticket for me and 2 more for a USAW flight but only issued 1. They are not responsive.Thoughts?",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.636
+        },
+        {
+          "tweet": "@USAirways don't worry. Used own initiative and arriving much earlier than you planned for me",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.584
+        },
+        {
+          "tweet": "@united is #ELP Friendly. #flyerfriendly #united #emb145 #elpaso http://t.co/9mEOzBO4xl",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.457
+        },
+        {
+          "tweet": "@united I already did.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.55
+        },
+        {
+          "tweet": "@SouthwestAir strives to be 'Customer Centric' in everything they do - communications, advertising, customer journey, etc. #ANAmarketers",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.603
+        },
+        {
+          "tweet": "@VirginAmerica Like http://t.co/VPqEm31XUQ",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.423
+        },
+        {
+          "tweet": "@USAirways  Instead of fair treatment, I got a nasty letter from a lady in senior management that illness forfeits miles like death.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.509
+        },
+        {
+          "tweet": "@United Personal Device Entertainment system is great but with app crashing every 10/15 mins I'm glad it's free for now.",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.533
+        },
+        {
+          "tweet": "@AmericanAir Thank you, you too!",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.975
+        },
+        {
+          "tweet": "@united sure... You've been saying that for as long as I've been tweeting about your obsolete fleet.  Promises are free.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.65
+        },
+        {
+          "tweet": "@AmericanAir Great, then tell me how you will fix it? @Suntimes @WSJ @latimes @nytimes #media #filmcrew #photography #cameragear",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.509
+        },
+        {
+          "tweet": "@united love being told you would issue a refund when you couldn't get us out of the way of a hurricane to have it denied",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.792
+        },
+        {
+          "tweet": "@usairways  Thank you for allowing me to spend more money on vacation by buying things I already bought.",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.417
+        },
+        {
+          "tweet": "@SouthwestAir Finally got through after 3 hours and all set. Thanks.",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.863
+        },
+        {
+          "tweet": "@AmericanAir I'd like to apologize to the gate agent for flight AA76, I was not aware that zone 1 was after the nine other precious gems.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.769
+        },
+        {
+          "tweet": "Social agencies, this is why we can't have nice things. @JetBlue: Our fleet's on fleek. http://t.co/QRxz0bGbtq",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.729
+        },
+        {
+          "tweet": "@VirginAmerica has getaway deals through May, from $59 one-way. Lots of cool cities http://t.co/QDlJHslOI5 #CheapFlights #FareCompare",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.614
+        },
+        {
+          "tweet": "@united that's right- with an overnight Miami.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.43
+        },
+        {
+          "tweet": "@JetBlue the whole plane. Hoping for better luck on the return flight Sunday.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.41
+        },
+        {
+          "tweet": "@usairways Trying to go Nashville to London and just have no idea when would be a good time to fly out of Nashville right now. @AmericanAir",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.428
+        },
+        {
+          "tweet": "seriously, I want to work on the JetBlue social team RT @JetBlue: @vincenzolandino http://t.co/eiGaJyzcW2",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.545
+        },
+        {
+          "tweet": "@SouthwestAir your welcome. It was the thoughts of nearly the entire plane.",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.38
+        },
+        {
+          "tweet": "@USAirways I have two tight connections in #Charlotte and #Frankfurt",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.709
+        },
+        {
+          "tweet": "@JetBlue Does your home airport not count in the badge system? My TB account says 2 flights but I've taken 3 this year.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.626
+        },
+        {
+          "tweet": "@JetBlue THANKS!! Her 80th bday is Saturday. We're having an aviation themed surprise party for her.",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.619
+        },
+        {
+          "tweet": "@USAirways you need to check information regarding hotels, shuttles, re routing flights, delayed flights",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.841
+        },
+        {
+          "tweet": "@JetBlue update on Flight 462 would be appreciated when you have time, thanks",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.542
+        },
+        {
+          "tweet": "@SouthwestAir are bicycles that the 62\", 50lbs criteria free or bikes are automatically $75/each way? The FAQ page isn't very clear to me.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.627
+        },
+        {
+          "tweet": "@JetBlue looks like their inflatable car seats got left on the plane, so I guess they'll be back sometime!! #savethoseseats",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.459
+        },
+        {
+          "tweet": "@USAirways Thank you. But I don\u2019t understand. What will you do with my feedback?",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.373
+        },
+        {
+          "tweet": "@SouthwestAir I will be writing in about the service via email. My company also transports well over 100 clients monthly via SW.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.472
+        },
+        {
+          "tweet": "@AmericanAir thnkx bt dont help now we will need to go WAY out of OUR way to get where we NEED to be for the $ u charge this sux #neveragain",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.6
+        },
+        {
+          "tweet": "@united What is your phone number. I can't find who to call about a flight reservation.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.501
+        },
+        {
+          "tweet": "@united Resolved. Over hour of work on  ground &amp; somehow the system reset itself during takeoff. I appreciate the quick response/service.",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.543
+        },
+        {
+          "tweet": "@united always makes our cross country flights rad. @hemispheresmag here's baby flier Charlotte! #8thtime5MonthsOld http://t.co/kCqnwIXUCm",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.447
+        },
+        {
+          "tweet": "@JetBlue Thanks for the FB. message telling me I will have to wait between 1-3 days.  I'm waiting.",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.524
+        }
+      ],
+      "n_misclassified": 662
+    },
+    "bilstm": {
+      "confusion_matrix": [
+        [
+          1637,
+          140,
+          58
+        ],
+        [
+          184,
+          350,
+          83
+        ],
+        [
+          64,
+          55,
+          353
+        ]
+      ],
+      "top_confusion_pairs": {
+        "neutral -> negative": 184,
+        "negative -> neutral": 140,
+        "neutral -> positive": 83,
+        "positive -> negative": 64,
+        "negative -> positive": 58,
+        "positive -> neutral": 55
+      },
+      "misclassified_examples": [
+        {
+          "tweet": "@JetBlue here you go... Your napkins pretty much say it all! http://t.co/OxY1Jnpjm3",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.394
+        },
+        {
+          "tweet": "@JetBlue ha ha! Can I get a wake up call at boarding time please?  Large coffee, extralight extra sweet please!",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.616
+        },
+        {
+          "tweet": "@united download jeokoo the American app for air travelers",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.681
+        },
+        {
+          "tweet": "@JetBlue actually flight 1089 not 1098",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.837
+        },
+        {
+          "tweet": "@JetBlue app just reminded me I will be flying to #FLL in 2 weeks. #ChillyCVZ #ThankGoodness @mypompanobeach #family #friends #sunshine",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.458
+        },
+        {
+          "tweet": "@USAirways thank you.3860 to cincy.just landed.you should add frequent flyer miles to my account..  a long, incredibly frustrating day",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.737
+        },
+        {
+          "tweet": "@united no wheelchairs",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.554
+        },
+        {
+          "tweet": "@SouthwestAir @ClinicPolly \nThank you-- I may have already responded but was 8UXZJ2",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.874
+        },
+        {
+          "tweet": "@USAirways we even offered to fly in to another airport and they said they couldn't do that. No explanation why they can't.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.994
+        },
+        {
+          "tweet": "@united I was. But I have given up.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.517
+        },
+        {
+          "tweet": "@USAirways your chairmans phone is down. what other number can i use?",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.677
+        },
+        {
+          "tweet": "@USAirways I just checked in online for tomorrow's flight - thought I should get auto upgrade? (Already got the email saying no seats)",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.773
+        },
+        {
+          "tweet": "@united thanks for prompt response.  Another hour to enjoy vacation! Perhaps a bug in the app as it still shows 2:55.",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.759
+        },
+        {
+          "tweet": "@SouthwestAir Are we sure flights will not be Cancelled Flighted after 1200 I am trying to make plans in STL",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.925
+        },
+        {
+          "tweet": "@united The only thing you fella have done right today is get me to the pacific time zone.",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.429
+        },
+        {
+          "tweet": "@SouthwestAir any deals to orlando in April/may??",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.56
+        },
+        {
+          "tweet": "@united I trust you enough to put my coat in my checked bag!",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.923
+        },
+        {
+          "tweet": "@united How long can I expect the formal response to take?",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.832
+        },
+        {
+          "tweet": "@AmericanAir Priority baggage evidently means it comes out last",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.532
+        },
+        {
+          "tweet": "@AmericanAir Hey Becky Piela at the Orange County airport has been really kind and helpful with rescheduling our flight!",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.664
+        },
+        {
+          "tweet": "@SouthwestAir great now we are all de boarding perfectly plane is shot. Fml. Plans are screwed. Thanks for nothing @SouthwestAir",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.702
+        },
+        {
+          "tweet": "@SouthwestAir same here. Would appreciate a follow so I can DM my info to figure out what I am supposed to do.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.442
+        },
+        {
+          "tweet": "@USAirways Expedia reserved a ticket for me and 2 more for a USAW flight but only issued 1. They are not responsive.Thoughts?",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.819
+        },
+        {
+          "tweet": "@USAirways don't worry. Used own initiative and arriving much earlier than you planned for me",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.917
+        },
+        {
+          "tweet": "@united is #ELP Friendly. #flyerfriendly #united #emb145 #elpaso http://t.co/9mEOzBO4xl",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.424
+        },
+        {
+          "tweet": "@SouthwestAir strives to be 'Customer Centric' in everything they do - communications, advertising, customer journey, etc. #ANAmarketers",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.966
+        },
+        {
+          "tweet": "@VirginAmerica Like http://t.co/VPqEm31XUQ",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.587
+        },
+        {
+          "tweet": "@AmericanAir Thank you, you too!",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.932
+        },
+        {
+          "tweet": "@VirginAmerica Many Thanks for the Follow.\n#ourprincess #freyasfund #USA #Bandie \nLooking for Any Help\ud83d\ude0d\n\ud83d\udc97\ud83c\uddec\ud83c\udde7\ud83d\udc97\ud83c\uddfa\ud83c\uddf8\ud83d\udc97\n\ud83c\udf80\ud83c\udf0f\ud83c\udf80 http://t.co/UJfS9Zi6kd",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.876
+        },
+        {
+          "tweet": "@united sure... You've been saying that for as long as I've been tweeting about your obsolete fleet.  Promises are free.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.499
+        },
+        {
+          "tweet": "@JetBlue BOS to DCA 1098 at 7:16 pm.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.713
+        },
+        {
+          "tweet": "@AmericanAir Great, then tell me how you will fix it? @Suntimes @WSJ @latimes @nytimes #media #filmcrew #photography #cameragear",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.459
+        },
+        {
+          "tweet": "@united love being told you would issue a refund when you couldn't get us out of the way of a hurricane to have it denied",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.968
+        },
+        {
+          "tweet": "@usairways  Thank you for allowing me to spend more money on vacation by buying things I already bought.",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.596
+        },
+        {
+          "tweet": "@SouthwestAir Finally got through after 3 hours and all set. Thanks.",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.873
+        },
+        {
+          "tweet": "@JetBlue who do you think is gonna win Mayweather or Pacquiao?",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.497
+        },
+        {
+          "tweet": "@AmericanAir I'd like to apologize to the gate agent for flight AA76, I was not aware that zone 1 was after the nine other precious gems.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.986
+        },
+        {
+          "tweet": "Social agencies, this is why we can't have nice things. @JetBlue: Our fleet's on fleek. http://t.co/QRxz0bGbtq",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.641
+        },
+        {
+          "tweet": "@VirginAmerica has getaway deals through May, from $59 one-way. Lots of cool cities http://t.co/QDlJHslOI5 #CheapFlights #FareCompare",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.934
+        },
+        {
+          "tweet": "@united that's right- with an overnight Miami.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.848
+        },
+        {
+          "tweet": "@usairways Trying to go Nashville to London and just have no idea when would be a good time to fly out of Nashville right now. @AmericanAir",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.654
+        },
+        {
+          "tweet": "seriously, I want to work on the JetBlue social team RT @JetBlue: @vincenzolandino http://t.co/eiGaJyzcW2",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.479
+        },
+        {
+          "tweet": "@SouthwestAir your welcome. It was the thoughts of nearly the entire plane.",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.449
+        },
+        {
+          "tweet": "@USAirways I have two tight connections in #Charlotte and #Frankfurt",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.658
+        },
+        {
+          "tweet": "@united what is going on with baggage claim in Newark!#tiredandwanttogohome",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.57
+        },
+        {
+          "tweet": "@JetBlue Does your home airport not count in the badge system? My TB account says 2 flights but I've taken 3 this year.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.971
+        },
+        {
+          "tweet": "@USAirways you need to check information regarding hotels, shuttles, re routing flights, delayed flights",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.907
+        },
+        {
+          "tweet": "@JetBlue update on Flight 462 would be appreciated when you have time, thanks",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.797
+        },
+        {
+          "tweet": "@SouthwestAir are bicycles that the 62\", 50lbs criteria free or bikes are automatically $75/each way? The FAQ page isn't very clear to me.",
+          "actual": "negative",
+          "predicted": "neutral",
+          "confidence": 0.487
+        },
+        {
+          "tweet": "@USAirways Thank you. But I don\u2019t understand. What will you do with my feedback?",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.566
+        },
+        {
+          "tweet": "@SouthwestAir I will be writing in about the service via email. My company also transports well over 100 clients monthly via SW.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.842
+        },
+        {
+          "tweet": "@united Resolved. Over hour of work on  ground &amp; somehow the system reset itself during takeoff. I appreciate the quick response/service.",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.973
+        },
+        {
+          "tweet": "@united always makes our cross country flights rad. @hemispheresmag here's baby flier Charlotte! #8thtime5MonthsOld http://t.co/kCqnwIXUCm",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.4
+        },
+        {
+          "tweet": "@JetBlue Thanks for the FB. message telling me I will have to wait between 1-3 days.  I'm waiting.",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.929
+        },
+        {
+          "tweet": "@SouthwestAir Are there any current promotions/codes for Nashville-Denver? Thank you!",
+          "actual": "neutral",
+          "predicted": "positive",
+          "confidence": 0.722
+        },
+        {
+          "tweet": "@SouthwestAir Customer Centricity is knowing people #ANAMarketers",
+          "actual": "positive",
+          "predicted": "negative",
+          "confidence": 0.807
+        },
+        {
+          "tweet": "@SouthwestAir thanks for the response - flight time has passed - rebooked now",
+          "actual": "negative",
+          "predicted": "positive",
+          "confidence": 0.718
+        },
+        {
+          "tweet": "@USAirways ah, and I was only given one shuttle voucher, so if I do ever get back to the airport you'll be getting the bill",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.915
+        },
+        {
+          "tweet": "@AmericanAir Do you have any sort of live chat feature? We're in the UK right now and that call would cost us alot. :(",
+          "actual": "neutral",
+          "predicted": "negative",
+          "confidence": 0.966
+        },
+        {
+          "tweet": "This is so smart it makes me angry MT @JetBlue: We\u2019ve partnered with @WSJ to bring you free digital access onboard! http://t.co/0LiwEcAsOe",
+          "actual": "positive",
+          "predicted": "neutral",
+          "confidence": 0.521
+        }
+      ],
+      "n_misclassified": 584
+    }
+  }
+}

@@ -1,0 +1,22 @@
+BrandPulse AI — Live Demo Link
+================================
+
+[ ADD YOUR DEPLOYED LINK HERE ]
+
+This project has not been deployed to a public URL yet — that step
+needs to happen from your own GitHub/Streamlit account, since it
+can't be done from this environment. It only takes a few minutes:
+
+1. Push the `Source_Code/` folder to a GitHub repository.
+2. Go to https://share.streamlit.io and sign in with GitHub.
+3. Click "New app", select your repo, and set the main file path to:
+       app.py
+4. Deploy. Streamlit Community Cloud will give you a public URL like:
+       https://<your-app-name>.streamlit.app
+
+5. Paste that URL at the top of this file before zipping/submitting.
+
+Note: the trained models in Source_Code/models/ are already included,
+so no retraining is needed for the deployed app to work immediately.
+Run `python setup_nltk.py` once as part of the deploy (or add it to a
+setup step) so NLTK resources are available.

@@ -1,0 +1,1564 @@
+"""
+BrandPulse AI — Twitter Sentiment Analysis Dashboard
+=====================================================
+Persevex NLP Internship Project
+Converted from Streamlit to Plotly Dash for enhanced interactivity and modern SaaS UI.
+
+Features:
+---------
+1. Predict            Single-tweet prediction with per-class probability bars.
+2. Batch Analysis     CSV upload → distribution, confidence, word cloud, download.
+3. Live Stream        Simulated incoming-tweet feed + 24h sentiment trend.
+4. Model Comparison   Logistic Regression vs BiLSTM metrics, charts, confusion matrix.
+5. Error Analysis     Misclassified examples, most-confused class pairs, limitations.
+6. About              Dataset stats, pipeline diagram, methodology, model recommendation.
+
+Run:
+    python app.py
+
+Then open http://127.0.0.1:8050 in your browser.
+"""
+
+from __future__ import annotations
+
+import base64
+import io
+import json
+import os
+import random
+from datetime import datetime, timedelta
+from typing import Optional, Tuple
+
+import dash
+import dash_bootstrap_components as dbc
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+from dash import Input, Output, State, callback, dcc, html
+
+from src import config
+from src.model_utils import (
+    load_error_analysis,
+    load_logreg,
+    load_lstm,
+    load_model_metadata,
+    predict_logreg,
+    predict_lstm,
+)
+from src.text_utils import clean_tweet
+
+# ============================================================================
+# App initialization & styling
+# ============================================================================
+app = dash.Dash(
+    __name__,
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    meta_tags=[
+        {"name": "viewport", "content": "width=device-width, initial-scale=1"},
+        {"name": "description", "content": "BrandPulse AI — Twitter Sentiment Analysis Dashboard"},
+    ],
+)
+app.title = "BrandPulse AI — Twitter Sentiment Analysis"
+
+# Load custom CSS
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+        <link rel="stylesheet" href="/assets/style.css">
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
+
+# ============================================================================
+# Load models & data once on startup
+# ============================================================================
+logreg_model, tfidf_vec = load_logreg()
+lstm_model, lstm_tok, lstm_cfg = load_lstm()
+metadata = load_model_metadata()
+error_data = load_error_analysis()
+
+SENTIMENT_COLORS = config.SENTIMENT_COLORS
+SENTIMENT_CLASSES = config.SENTIMENT_CLASSES
+LOW_CONFIDENCE_THRESHOLD = config.LOW_CONFIDENCE_THRESHOLD
+
+available_models = []
+if logreg_model is not None:
+    available_models.append("TF-IDF + Logistic Regression")
+if lstm_model is not None:
+    available_models.append("LSTM (Deep Learning)")
+
+FALLBACK_STREAM_TWEETS = [
+    "Flight delayed 3 hours and no one told us why. Ridiculous.",
+    "Thanks for the quick refund, appreciate the support!",
+    "Boarding on time today, nice change of pace.",
+    "Lost my luggage again... second time this year.",
+    "Crew was super friendly on this flight, made the trip better.",
+    "Anyone else stuck in the security line for an hour?",
+    "Great legroom on this new plane, very comfortable.",
+    "Cancelled with zero notice, missed my connection.",
+    "Check-in was smooth and fast, no complaints.",
+    "Why is the wifi always broken on these flights?",
+    "Just landed, flight was fine, nothing special.",
+    "Customer service hung up on me twice today.",
+    "Loved the snacks and service, will fly again!",
+    "Seat was broken and they wouldn't move me. Awful.",
+    "On time departure and arrival, exactly as expected.",
+]
+
+
+# ============================================================================
+# Helper functions
+# ============================================================================
+def load_stream_pool(sample_size: int = 400) -> list:
+    """Load real tweets from dataset to simulate live stream."""
+    if os.path.exists(config.DATA_PATH):
+        try:
+            df = pd.read_csv(config.DATA_PATH)
+        except UnicodeDecodeError:
+            df = pd.read_csv(config.DATA_PATH, encoding="latin-1")
+        text_col = next((c for c in ["text", "tweet", "content"] if c in df.columns), None)
+        if text_col:
+            texts = df[text_col].dropna().astype(str).tolist()
+            if len(texts) > sample_size:
+                texts = random.sample(texts, sample_size)
+            return texts
+    return FALLBACK_STREAM_TWEETS
+
+
+def simulated_timestamps(n: int) -> list:
+    """Generate simulated timestamps across the last 24 hours."""
+    now = datetime.now()
+    start = now - timedelta(hours=24)
+    step = timedelta(hours=24) / max(n, 1)
+    out = []
+    for i in range(n):
+        jitter = timedelta(
+            minutes=random.uniform(
+                -step.total_seconds() / 120, step.total_seconds() / 120
+            )
+        )
+        out.append(start + step * i + jitter)
+    return out
+
+
+def run_prediction_full(texts: list, model_choice: str) -> Tuple:
+    """Run prediction with chosen model. Returns (preds, conf, proba, classes)."""
+    if model_choice == "TF-IDF + Logistic Regression":
+        return predict_logreg(texts, logreg_model, tfidf_vec)
+    return predict_lstm(texts, lstm_model, lstm_tok, lstm_cfg)
+
+
+def parse_contents(contents: str, filename: str) -> Optional[pd.DataFrame]:
+    """Parse uploaded CSV file content."""
+    if not contents:
+        return None
+    content_type, content_string = contents.split(",")
+    try:
+        decoded = base64.b64decode(content_string)
+        try:
+            df = pd.read_csv(io.StringIO(decoded.decode("utf-8")))
+        except UnicodeDecodeError:
+            df = pd.read_csv(io.StringIO(decoded.decode("latin-1")))
+        return df
+    except Exception:
+        return None
+
+
+def hourly_trend(buffer_df: pd.DataFrame) -> pd.DataFrame:
+    """Compute hourly sentiment breakdown as percentages."""
+    if buffer_df.empty:
+        return pd.DataFrame(columns=["positive", "neutral", "negative"])
+    df = buffer_df.copy()
+    df["hour"] = df["timestamp"].dt.floor("h")
+    pivot = df.groupby(["hour", "sentiment"]).size().unstack(fill_value=0)
+    for col in ["positive", "neutral", "negative"]:
+        if col not in pivot.columns:
+            pivot[col] = 0
+    pivot = pivot[["positive", "neutral", "negative"]]
+    pct = pivot.div(pivot.sum(axis=1), axis=0) * 100
+    pct.index = pct.index.strftime("%H:%M")
+    return pct.round(1)
+
+
+def create_kpi_card(title: str, value: str, icon: str = "📊", color: str = "#4F46E5") -> dbc.Card:
+    """Create a KPI card component."""
+    return dbc.Card(
+        dbc.CardBody(
+            [
+                html.Div(
+                    [
+                        html.Span(icon, className="kpi-icon"),
+                        html.Div(
+                            [
+                                html.Div(value, className="kpi-value"),
+                                html.Div(title, className="kpi-label"),
+                            ],
+                            className="kpi-text",
+                        ),
+                    ],
+                    className="kpi-content",
+                ),
+            ]
+        ),
+        className="kpi-card",
+        style={"borderLeftColor": color},
+    )
+
+
+def create_sentiment_badge(label: str, confidence: float) -> html.Div:
+    """Create a sentiment prediction badge."""
+    color = SENTIMENT_COLORS.get(label, "#334155")
+    return html.Div(
+        [
+            html.Span(label.upper(), style={"fontWeight": "700", "fontSize": "24px"}),
+            html.Span(
+                f" · {confidence*100:.1f}% confidence",
+                style={"opacity": "0.85", "fontWeight": "600", "fontSize": "16px"},
+            ),
+        ],
+        style={
+            "display": "inline-flex",
+            "alignItems": "center",
+            "gap": "12px",
+            "padding": "16px 28px",
+            "borderRadius": "9999px",
+            "background": color,
+            "color": "white",
+            "fontWeight": "700",
+            "fontSize": "20px",
+            "boxShadow": f"0 8px 20px -8px {color}99",
+            "marginBottom": "16px",
+        },
+    )
+
+
+def create_probability_bars(classes: list, proba_row: np.ndarray) -> html.Div:
+    """Create probability bars for each sentiment class."""
+    bars = []
+    order = sorted(zip(classes, proba_row), key=lambda x: -x[1])
+    top_label, top_p = order[0]
+
+    for label, p in order:
+        color = SENTIMENT_COLORS.get(label, "#334155")
+        bars.append(
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Span(
+                                label.capitalize(),
+                                style={"fontWeight": "600", "textTransform": "capitalize"},
+                            ),
+                            html.Span(
+                                f"{p*100:.1f}%",
+                                style={"fontWeight": "700", "color": color},
+                            ),
+                        ],
+                        style={
+                            "display": "flex",
+                            "justifyContent": "space-between",
+                            "fontSize": "13px",
+                            "color": "#334155",
+                            "marginBottom": "6px",
+                        },
+                    ),
+                    html.Div(
+                        html.Div(
+                            style={
+                                "width": f"{max(p*100, 1):.1f}%",
+                                "background": f"linear-gradient(90deg, {color}CC, {color})",
+                                "height": "10px",
+                                "borderRadius": "6px",
+                                "transition": "width 0.3s ease",
+                            }
+                        ),
+                        style={
+                            "background": "#EEF0F4",
+                            "borderRadius": "6px",
+                            "height": "10px",
+                            "overflow": "hidden",
+                        },
+                    ),
+                ],
+                style={"marginBottom": "12px"},
+            )
+        )
+
+    content = [html.Div(bars)]
+    if top_p < LOW_CONFIDENCE_THRESHOLD:
+        breakdown = ", ".join(f"{l.capitalize()}: {p*100:.0f}%" for l, p in order)
+        content.append(
+            dbc.Alert(
+                f"⚠️ Low-confidence prediction — the model is uncertain ({breakdown}).",
+                color="warning",
+                className="mt-3",
+            )
+        )
+
+    return html.Div(content)
+
+
+def create_sentiment_distribution_chart(sentiment_series: pd.Series) -> go.Figure:
+    """Create a Plotly bar chart for sentiment distribution."""
+    counts = sentiment_series.value_counts()
+    colors = [SENTIMENT_COLORS.get(c, "#334155") for c in counts.index]
+
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=counts.index,
+                y=counts.values,
+                marker=dict(color=colors),
+                text=counts.values,
+                textposition="outside",
+                hovertemplate="<b>%{x}</b><br>Tweets: %{y}<extra></extra>",
+            )
+        ]
+    )
+    fig.update_layout(
+        title="Sentiment Distribution",
+        xaxis_title=None,
+        yaxis_title="Tweets",
+        hovermode="x unified",
+        showlegend=False,
+        template="plotly_white",
+        height=350,
+        margin=dict(l=40, r=20, t=40, b=40),
+    )
+    return fig
+
+
+def create_confidence_histogram(confidence_series: pd.Series) -> go.Figure:
+    """Create a Plotly histogram for confidence distribution."""
+    fig = go.Figure(
+        data=[
+            go.Histogram(
+                x=confidence_series,
+                nbinsx=20,
+                marker=dict(color="#4F46E5"),
+                hovertemplate="Confidence: %{x:.2f}<br>Count: %{y}<extra></extra>",
+            )
+        ]
+    )
+    fig.update_layout(
+        title="Confidence Distribution",
+        xaxis_title="Confidence",
+        yaxis_title="Tweets",
+        showlegend=False,
+        template="plotly_white",
+        height=350,
+        margin=dict(l=40, r=20, t=40, b=40),
+    )
+    return fig
+
+
+def create_confusion_matrix_heatmap(cm: list, classes: list, title: str) -> go.Figure:
+    """Create a confusion matrix heatmap."""
+    cm = np.array(cm)
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=cm,
+            x=classes,
+            y=classes,
+            colorscale="Blues",
+            text=cm,
+            texttemplate="%{text}",
+            textfont={"size": 12},
+            hovertemplate="Actual: %{y}<br>Predicted: %{x}<br>Count: %{z}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        title=title,
+        xaxis_title="Predicted",
+        yaxis_title="Actual",
+        height=400,
+        margin=dict(l=80, r=20, t=40, b=40),
+    )
+    return fig
+
+
+def create_trend_chart(trend_df: pd.DataFrame) -> go.Figure:
+    """Create a line chart for sentiment trend over time."""
+    if trend_df.empty:
+        return go.Figure().add_annotation(text="No data available")
+
+    fig = go.Figure()
+    colors = {
+        "positive": SENTIMENT_COLORS["positive"],
+        "neutral": SENTIMENT_COLORS["neutral"],
+        "negative": SENTIMENT_COLORS["negative"],
+    }
+
+    for sentiment in ["positive", "neutral", "negative"]:
+        if sentiment in trend_df.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=trend_df.index,
+                    y=trend_df[sentiment],
+                    mode="lines+markers",
+                    name=sentiment.capitalize(),
+                    line=dict(color=colors.get(sentiment, "#334155"), width=2),
+                    marker=dict(size=6),
+                    hovertemplate="<b>%{fullData.name}</b><br>Time: %{x}<br>%: %{y:.1f}%<extra></extra>",
+                )
+            )
+
+    fig.update_layout(
+        title="24-Hour Sentiment Trend",
+        xaxis_title="Time",
+        yaxis_title="Percentage (%)",
+        hovermode="x unified",
+        template="plotly_white",
+        height=400,
+        margin=dict(l=40, r=20, t=40, b=40),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    return fig
+
+
+# ============================================================================
+# App Layout
+# ============================================================================
+app.layout = dbc.Container(
+    [
+        # Metadata for callbacks
+        dcc.Store(id="session-state", data={"stream_buffer": []}),
+        dcc.Store(id="batch-data-store"),
+        
+        # ====== Header / Hero ======
+        dbc.Row(
+            dbc.Col(
+                html.Div(
+                    [
+                        html.Div(
+                            "PERSEVEX NLP INTERNSHIP · TWITTER SENTIMENT ANALYSIS",
+                            className="bp-eyebrow",
+                        ),
+                        html.H1("BrandPulse AI", className="bp-hero-title"),
+                        html.P(
+                            "Classify tweets as Positive, Negative, or Neutral in real time — "
+                            "comparing a fast, interpretable TF-IDF + Logistic Regression baseline "
+                            "against a more accurate Bidirectional LSTM, side by side.",
+                            className="bp-hero-subtitle",
+                        ),
+                        html.Div(
+                            id="hero-stats-container",
+                            className="bp-hero-stats",
+                        ),
+                    ],
+                    className="bp-hero-banner",
+                ),
+                width=12,
+            ),
+            className="mb-4",
+        ),
+        
+        # ====== Model Selection & Info ======
+        dbc.Row(
+            [
+                dbc.Col(
+                    dbc.Card(
+                        dbc.CardBody(
+                            [
+                                html.H5("Active Model", className="card-title"),
+                                dcc.Dropdown(
+                                    id="model-selector",
+                                    options=[
+                                        {"label": m, "value": m}
+                                        for m in available_models
+                                    ]
+                                    or [{"label": "No models available", "value": None}],
+                                    value=available_models[0] if available_models else None,
+                                    clearable=False,
+                                    disabled=not available_models,
+                                ),
+                            ]
+                        ),
+                        className="info-card",
+                    ),
+                    md=6,
+                ),
+                dbc.Col(
+                    dbc.Card(
+                        dbc.CardBody(
+                            [
+                                html.H5("Dataset & Models", className="card-title"),
+                                html.Div(
+                                    [
+                                        html.Div(
+                                            [
+                                                html.Strong(
+                                                    f"{metadata.get('dataset_size', 0):,}"
+                                                    if metadata
+                                                    else "N/A"
+                                                ),
+                                                html.Span(" tweets analyzed"),
+                                            ],
+                                            className="info-item",
+                                        ),
+                                        html.Div(
+                                            [
+                                                html.Strong("Logistic Regression"),
+                                                html.Span(
+                                                    f" • {metadata.get('models', {}).get('logistic_regression', {}).get('accuracy', 0)*100:.1f}% accuracy"
+                                                    if metadata
+                                                    and metadata.get("models", {}).get(
+                                                        "logistic_regression"
+                                                    )
+                                                    else " • Not trained"
+                                                ),
+                                            ],
+                                            className="info-item",
+                                        ),
+                                        html.Div(
+                                            [
+                                                html.Strong("BiLSTM"),
+                                                html.Span(
+                                                    f" • {metadata.get('models', {}).get('bilstm', {}).get('accuracy', 0)*100:.1f}% accuracy"
+                                                    if metadata
+                                                    and metadata.get("models", {}).get("bilstm")
+                                                    else " • Not trained"
+                                                ),
+                                            ],
+                                            className="info-item",
+                                        ),
+                                    ]
+                                ),
+                            ]
+                        ),
+                        className="info-card",
+                    ),
+                    md=6,
+                ),
+            ],
+            className="mb-4 g-3",
+        ),
+        
+        # ====== Tabs ======
+        dbc.Tabs(
+            [
+                # ========== TAB 1: PREDICT ==========
+                dbc.Tab(
+                    dbc.Container(
+                        [
+                            html.Br(),
+                            dbc.Row(
+                                dbc.Col(
+                                    [
+                                        html.H4("Analyze a Single Tweet"),
+                                        dbc.Card(
+                                            dbc.CardBody(
+                                                [
+                                                    dcc.Textarea(
+                                                        id="predict-textarea",
+                                                        placeholder="Enter tweet text...",
+                                                        value="I absolutely love the new update, it works so smoothly!",
+                                                        style={
+                                                            "width": "100%",
+                                                            "height": "120px",
+                                                            "fontFamily": "monospace",
+                                                            "padding": "12px",
+                                                            "border": "1px solid #E0E4F5",
+                                                            "borderRadius": "8px",
+                                                            "fontSize": "14px",
+                                                        },
+                                                    ),
+                                                    dbc.Button(
+                                                        "Analyze",
+                                                        id="predict-button",
+                                                        color="primary",
+                                                        className="mt-3",
+                                                        disabled=not available_models,
+                                                        size="lg",
+                                                    ),
+                                                ]
+                                            ),
+                                            className="input-card mt-3",
+                                        ),
+                                    ],
+                                    md=8,
+                                ),
+                                className="mb-4",
+                            ),
+                            dbc.Row(
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            id="predict-output",
+                                            children=[
+                                                dbc.Alert(
+                                                    "📝 Enter a tweet and click Analyze to get started.",
+                                                    color="info",
+                                                )
+                                            ],
+                                        )
+                                    ],
+                                    width=12,
+                                ),
+                            ),
+                        ],
+                        fluid=True,
+                    ),
+                    label="Predict",
+                    tab_id="tab-predict",
+                ),
+                
+                # ========== TAB 2: BATCH ANALYSIS ==========
+                dbc.Tab(
+                    dbc.Container(
+                        [
+                            html.Br(),
+                            dbc.Row(
+                                dbc.Col(
+                                    [
+                                        html.H4("Batch Analysis"),
+                                        html.P(
+                                            "Upload a CSV containing tweet text to analyze multiple tweets at once."
+                                        ),
+                                        dcc.Upload(
+                                            id="batch-upload",
+                                            children=html.Div(
+                                                [
+                                                    "📁 Drag and drop or ",
+                                                    html.A("select a CSV file"),
+                                                ]
+                                            ),
+                                            style={
+                                                "width": "100%",
+                                                "height": "120px",
+                                                "lineHeight": "120px",
+                                                "borderWidth": "2px",
+                                                "borderStyle": "dashed",
+                                                "borderRadius": "8px",
+                                                "textAlign": "center",
+                                                "margin": "10px 0",
+                                                "cursor": "pointer",
+                                                "background": "#F8FAFC",
+                                                "borderColor": "#CBD5E1",
+                                            },
+                                        ),
+                                        dbc.Button(
+                                            "Run Batch Analysis",
+                                            id="batch-button",
+                                            color="primary",
+                                            className="mt-3",
+                                            disabled=True,
+                                            size="lg",
+                                        ),
+                                    ],
+                                    md=8,
+                                ),
+                                className="mb-4",
+                            ),
+                            dbc.Row(
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            id="batch-output",
+                                            children=[
+                                                dbc.Alert(
+                                                    "📤 Upload a CSV file to get started.",
+                                                    color="info",
+                                                )
+                                            ],
+                                        )
+                                    ],
+                                    width=12,
+                                ),
+                            ),
+                        ],
+                        fluid=True,
+                    ),
+                    label="Batch Analysis",
+                    tab_id="tab-batch",
+                ),
+                
+                # ========== TAB 3: LIVE STREAM ==========
+                dbc.Tab(
+                    dbc.Container(
+                        [
+                            html.Br(),
+                            dbc.Row(
+                                dbc.Col(
+                                    [
+                                        html.H4("Simulated Live Stream"),
+                                        dbc.Alert(
+                                            "⚠️ Simulated feed, not a real Twitter/X connection. "
+                                            "The live X/Twitter API isn't free, so this replays real tweets "
+                                            "from the training dataset with synthetic timestamps.",
+                                            color="warning",
+                                        ),
+                                        dbc.Row(
+                                            [
+                                                dbc.Col(
+                                                    [
+                                                        html.Label("Tweets to stream:"),
+                                                        dcc.Slider(
+                                                            id="stream-count-slider",
+                                                            min=10,
+                                                            max=100,
+                                                            step=10,
+                                                            value=40,
+                                                            marks={
+                                                                i: str(i)
+                                                                for i in range(10, 101, 10)
+                                                            },
+                                                        ),
+                                                    ],
+                                                    md=4,
+                                                ),
+                                                dbc.Col(
+                                                    [
+                                                        html.Label("Speed (s/tweet):"),
+                                                        dcc.Slider(
+                                                            id="stream-speed-slider",
+                                                            min=0.05,
+                                                            max=1.0,
+                                                            step=0.05,
+                                                            value=0.2,
+                                                            marks={
+                                                                0.05: "0.05s",
+                                                                0.5: "0.5s",
+                                                                1.0: "1.0s",
+                                                            },
+                                                        ),
+                                                    ],
+                                                    md=4,
+                                                ),
+                                                dbc.Col(
+                                                    [
+                                                        html.Label("Actions:"),
+                                                        html.Div(
+                                                            [
+                                                                dbc.Button(
+                                                                    "▶ Start",
+                                                                    id="stream-start-button",
+                                                                    color="primary",
+                                                                    size="sm",
+                                                                    disabled=not available_models,
+                                                                ),
+                                                                dbc.Button(
+                                                                    "⟲ Reset",
+                                                                    id="stream-reset-button",
+                                                                    color="secondary",
+                                                                    size="sm",
+                                                                    className="ms-2",
+                                                                ),
+                                                            ]
+                                                        ),
+                                                    ],
+                                                    md=4,
+                                                ),
+                                            ]
+                                        ),
+                                    ],
+                                    width=12,
+                                ),
+                                className="mb-4",
+                            ),
+                            dbc.Row(
+                                dbc.Col(
+                                    [
+                                        html.Div(
+                                            id="stream-output",
+                                            children=[
+                                                dbc.Alert(
+                                                    "🎬 Click 'Start' to begin the simulated stream.",
+                                                    color="info",
+                                                )
+                                            ],
+                                        )
+                                    ],
+                                    width=12,
+                                ),
+                            ),
+                        ],
+                        fluid=True,
+                    ),
+                    label="Live Stream",
+                    tab_id="tab-live",
+                ),
+                
+                # ========== TAB 4: MODEL COMPARISON ==========
+                dbc.Tab(
+                    dbc.Container(
+                        [
+                            html.Br(),
+                            dbc.Row(
+                                dbc.Col(
+                                    [
+                                        html.H4("Model Comparison"),
+                                        html.Div(id="comparison-output"),
+                                    ],
+                                    width=12,
+                                ),
+                            ),
+                        ],
+                        fluid=True,
+                    ),
+                    label="Model Comparison",
+                    tab_id="tab-compare",
+                ),
+                
+                # ========== TAB 5: ERROR ANALYSIS ==========
+                dbc.Tab(
+                    dbc.Container(
+                        [
+                            html.Br(),
+                            dbc.Row(
+                                dbc.Col(
+                                    [
+                                        html.H4("Error Analysis"),
+                                        html.Div(id="error-output"),
+                                    ],
+                                    width=12,
+                                ),
+                            ),
+                        ],
+                        fluid=True,
+                    ),
+                    label="Error Analysis",
+                    tab_id="tab-errors",
+                ),
+                
+                # ========== TAB 6: ABOUT ==========
+                dbc.Tab(
+                    dbc.Container(
+                        [
+                            html.Br(),
+                            dbc.Row(
+                                dbc.Col(
+                                    [
+                                        html.H4("About & Methodology"),
+                                        html.Div(id="about-output"),
+                                    ],
+                                    width=12,
+                                ),
+                            ),
+                        ],
+                        fluid=True,
+                    ),
+                    label="About",
+                    tab_id="tab-about",
+                ),
+            ],
+            id="main-tabs",
+            active_tab="tab-predict",
+            className="bp-tabs",
+        ),
+        
+        # ====== Footer ======
+        html.Hr(className="my-5"),
+        html.Footer(
+            html.Div(
+                "BrandPulse AI · Twitter Sentiment Analysis · Persevex NLP Internship Project · "
+                "TF-IDF + Logistic Regression vs. Bidirectional LSTM",
+                className="bp-footer",
+            ),
+            className="text-center text-muted",
+        ),
+    ],
+    fluid=True,
+    className="bp-container",
+)
+
+
+# ============================================================================
+# Callbacks & Interactivity
+# ============================================================================
+
+@callback(
+    Output("hero-stats-container", "children"),
+    Input("model-selector", "value"),
+)
+def update_hero_stats(selected_model):
+    """Update hero statistics based on metadata."""
+    stats = []
+    if metadata:
+        stats.append(("📊", f"{metadata.get('dataset_size', 0):,}", "Tweets Analyzed"))
+        if metadata.get("models", {}).get("logistic_regression"):
+            lr = metadata["models"]["logistic_regression"]
+            stats.append(("⚡", f"{lr['accuracy']*100:.1f}%", "Logistic Regression"))
+        if metadata.get("models", {}).get("bilstm"):
+            ls = metadata["models"]["bilstm"]
+            stats.append(("🧠", f"{ls['accuracy']*100:.1f}%", "BiLSTM"))
+
+    if not stats:
+        return dbc.Alert("No model metadata available.", color="info")
+
+    cards = []
+    for icon, value, label in stats:
+        cards.append(
+            dbc.Col(
+                create_kpi_card(label, value, icon),
+                md=3,
+                className="mb-2",
+            )
+        )
+
+    return dbc.Row(cards, className="g-2")
+
+
+@callback(
+    Output("predict-output", "children"),
+    Input("predict-button", "n_clicks"),
+    State("predict-textarea", "value"),
+    State("model-selector", "value"),
+    prevent_initial_call=True,
+)
+def handle_predict(n_clicks, text, model_choice):
+    """Handle single tweet prediction."""
+    if not model_choice or not available_models:
+        return dbc.Alert("❌ No trained model available. Check model loading.", color="danger")
+
+    if not text or not text.strip():
+        return dbc.Alert("⚠️ Please enter a tweet.", color="warning")
+
+    try:
+        preds, conf, proba, classes = run_prediction_full([text], model_choice)
+        sentiment = str(preds[0])
+        confidence = float(conf[0])
+
+        return dbc.Card(
+            dbc.CardBody(
+                [
+                    html.H5("✅ Prediction Result", className="card-title mb-4"),
+                    create_sentiment_badge(sentiment, confidence),
+                    html.Hr(),
+                    html.H6("📊 Class Probabilities", className="mt-4 mb-3"),
+                    create_probability_bars(classes, proba[0]),
+                    html.Hr(),
+                    html.H6("🧹 Cleaned Text", className="mt-4 mb-3"),
+                    dbc.Alert(
+                        clean_tweet(text) or "(empty after cleaning)",
+                        color="light",
+                    ),
+                ]
+            ),
+            className="result-card mt-4",
+        )
+    except Exception as e:
+        return dbc.Alert(f"❌ Error during prediction: {str(e)}", color="danger")
+
+
+@callback(
+    [
+        Output("batch-button", "disabled"),
+        Output("batch-data-store", "data"),
+        Output("batch-output", "children"),
+    ],
+    [
+        Input("batch-upload", "contents"),
+        Input("batch-button", "n_clicks"),
+    ],
+    [State("batch-upload", "filename"), State("model-selector", "value")],
+    prevent_initial_call=True,
+)
+def handle_batch_analysis(contents, n_clicks, filename, model_choice):
+    """Handle batch CSV analysis."""
+    if not contents:
+        return True, None, dbc.Alert("📤 Upload a CSV file to get started.", color="info")
+
+    if not model_choice or not available_models:
+        return False, None, dbc.Alert("❌ No trained model available.", color="danger")
+
+    # Parse file
+    data = parse_contents(contents, filename or "")
+    if data is None or data.empty:
+        return False, None, dbc.Alert("❌ Could not parse CSV file. Ensure it's a valid CSV.", color="danger")
+
+    # Find text column
+    text_col = next(
+        (c for c in ["text", "tweet", "content", "SentimentText"] if c in data.columns),
+        None,
+    )
+    if text_col is None:
+        return False, None, dbc.Alert(
+            "❌ CSV must contain one of: text, tweet, content, SentimentText.",
+            color="danger",
+        )
+
+    if n_clicks and n_clicks > 0:
+        try:
+            texts_raw = data[text_col].astype(str).tolist()
+            empty_mask = [not t.strip() for t in texts_raw]
+            n_empty = sum(empty_mask)
+            texts = [t for t, e in zip(texts_raw, empty_mask) if not e]
+
+            if not texts:
+                return False, None, dbc.Alert("⚠️ No non-empty text found.", color="warning")
+
+            preds, conf, proba, classes = run_prediction_full(texts, model_choice)
+
+            result_df = data[~pd.Series(empty_mask)].copy()
+            result_df["predicted_sentiment"] = preds
+            result_df["confidence"] = pd.Series(conf).round(3).values
+
+            sentiment_series = pd.Series(preds)
+            conf_series = pd.Series(conf)
+
+            # Create output
+            summary_row = dbc.Row(
+                [
+                    dbc.Col(
+                        create_kpi_card("Tweets Analyzed", f"{len(texts):,}", "📊"),
+                        md=3,
+                    ),
+                    dbc.Col(
+                        create_kpi_card(
+                            "Positive",
+                            f"{(sentiment_series == 'positive').sum() / len(texts) * 100:.1f}%",
+                            "😊",
+                            SENTIMENT_COLORS["positive"],
+                        ),
+                        md=3,
+                    ),
+                    dbc.Col(
+                        create_kpi_card(
+                            "Neutral",
+                            f"{(sentiment_series == 'neutral').sum() / len(texts) * 100:.1f}%",
+                            "😐",
+                            SENTIMENT_COLORS["neutral"],
+                        ),
+                        md=3,
+                    ),
+                    dbc.Col(
+                        create_kpi_card(
+                            "Negative",
+                            f"{(sentiment_series == 'negative').sum() / len(texts) * 100:.1f}%",
+                            "😞",
+                            SENTIMENT_COLORS["negative"],
+                        ),
+                        md=3,
+                    ),
+                ],
+                className="g-3 mb-4",
+            )
+
+            charts_row = dbc.Row(
+                [
+                    dbc.Col(
+                        dcc.Graph(figure=create_sentiment_distribution_chart(sentiment_series)),
+                        md=6,
+                    ),
+                    dbc.Col(
+                        dcc.Graph(figure=create_confidence_histogram(conf_series)),
+                        md=6,
+                    ),
+                ],
+                className="g-3 mb-4",
+            )
+
+            # Results table
+            results_table = dbc.Card(
+                dbc.CardBody(
+                    [
+                        html.H6("📋 Prediction Results"),
+                        html.Div(
+                            dbc.Table.from_dataframe(
+                                result_df.head(20),
+                                striped=True,
+                                bordered=True,
+                                hover=True,
+                                size="sm",
+                            ),
+                            style={"overflowX": "auto"},
+                        ),
+                        dbc.Button(
+                            "⬇️ Download Full Results CSV",
+                            id="download-button",
+                            color="success",
+                            className="mt-3",
+                            n_clicks=0,
+                        ),
+                    ]
+                )
+            )
+
+            return False, result_df.to_json(date_format='iso', orient='split'), html.Div(
+                [summary_row, charts_row, results_table]
+            )
+        except Exception as e:
+            return False, None, dbc.Alert(f"❌ Error: {str(e)}", color="danger")
+
+    return False, None, dbc.Alert("🔄 Click 'Run Batch Analysis' to process the uploaded CSV.", color="info")
+
+
+@callback(
+    Output("comparison-output", "children"),
+    Input("model-selector", "value"),
+)
+def render_comparison(selected_model):
+    """Render model comparison tab."""
+    if not metadata or "models" not in metadata or not metadata["models"]:
+        return dbc.Alert(
+            "📊 No model metrics found. Run `python scripts/generate_model_artifacts.py` after training.",
+            color="info",
+        )
+
+    m = metadata["models"]
+    lr = m.get("logistic_regression")
+    ls = m.get("bilstm")
+
+    if not lr or not ls:
+        return dbc.Alert(
+            "⚠️ Metrics for both models are needed. Only one model's data was found.",
+            color="warning",
+        )
+
+    # Metrics table
+    metrics_df = pd.DataFrame(
+        {
+            "Metric": ["Accuracy", "Macro F1", "Weighted F1", "Training Time", "Model Size"],
+            "Logistic Regression": [
+                f"{lr['accuracy']*100:.1f}%",
+                f"{lr['macro_f1']:.2f}",
+                f"{lr['weighted_f1']:.2f}",
+                f"~{lr['approx_training_time_seconds']}s",
+                f"~{lr['approx_model_size_mb']}MB",
+            ],
+            "BiLSTM": [
+                f"{ls['accuracy']*100:.1f}%",
+                f"{ls['macro_f1']:.2f}",
+                f"{ls['weighted_f1']:.2f}",
+                f"~{ls['approx_training_time_seconds']}s",
+                f"~{ls['approx_model_size_mb']}MB",
+            ],
+        }
+    )
+
+    # Comparison charts
+    accuracy_fig = go.Figure(
+        data=[
+            go.Bar(
+                name="Logistic Regression",
+                x=["Accuracy"],
+                y=[lr["accuracy"] * 100],
+                marker=dict(color="#4F46E5"),
+                text=[f"{lr['accuracy']*100:.1f}%"],
+                textposition="outside",
+            ),
+            go.Bar(
+                name="BiLSTM",
+                x=["Accuracy"],
+                y=[ls["accuracy"] * 100],
+                marker=dict(color="#7C3AED"),
+                text=[f"{ls['accuracy']*100:.1f}%"],
+                textposition="outside",
+            ),
+        ]
+    )
+    accuracy_fig.update_layout(
+        title="Accuracy Comparison",
+        yaxis_title="Accuracy (%)",
+        showlegend=True,
+        template="plotly_white",
+        height=350,
+        barmode="group",
+        margin=dict(l=40, r=20, t=40, b=40),
+    )
+
+    f1_fig = go.Figure(
+        data=[
+            go.Bar(
+                name="Logistic Regression",
+                x=["Macro F1"],
+                y=[lr["macro_f1"]],
+                marker=dict(color="#4F46E5"),
+                text=[f"{lr['macro_f1']:.2f}"],
+                textposition="outside",
+            ),
+            go.Bar(
+                name="BiLSTM",
+                x=["Macro F1"],
+                y=[ls["macro_f1"]],
+                marker=dict(color="#7C3AED"),
+                text=[f"{ls['macro_f1']:.2f}"],
+                textposition="outside",
+            ),
+        ]
+    )
+    f1_fig.update_layout(
+        title="Macro F1 Comparison",
+        yaxis_title="F1 Score",
+        showlegend=True,
+        template="plotly_white",
+        height=350,
+        barmode="group",
+        margin=dict(l=40, r=20, t=40, b=40),
+    )
+
+    # Per-class F1
+    per_class_fig = go.Figure(
+        data=[
+            go.Bar(
+                name="Logistic Regression",
+                x=config.SENTIMENT_CLASSES,
+                y=[lr["per_class_f1"].get(c, 0) for c in config.SENTIMENT_CLASSES],
+                marker=dict(color="#4F46E5"),
+            ),
+            go.Bar(
+                name="BiLSTM",
+                x=config.SENTIMENT_CLASSES,
+                y=[ls["per_class_f1"].get(c, 0) for c in config.SENTIMENT_CLASSES],
+                marker=dict(color="#7C3AED"),
+            ),
+        ]
+    )
+    per_class_fig.update_layout(
+        title="Per-Class F1 Score",
+        yaxis_title="F1 Score",
+        showlegend=True,
+        template="plotly_white",
+        height=350,
+        barmode="group",
+        margin=dict(l=40, r=20, t=40, b=40),
+    )
+
+    # Confusion matrices
+    lr_cm = error_data.get("models", {}).get("logistic_regression", {}).get("confusion_matrix")
+    ls_cm = error_data.get("models", {}).get("bilstm", {}).get("confusion_matrix")
+
+    confusion_content = []
+    if lr_cm:
+        confusion_content.append(
+            dbc.Row(
+                dbc.Col(
+                    dcc.Graph(
+                        figure=create_confusion_matrix_heatmap(lr_cm, config.SENTIMENT_CLASSES, "Confusion Matrix — Logistic Regression")
+                    ),
+                    md=6,
+                ),
+                className="mt-4 mb-4",
+            )
+        )
+    if ls_cm:
+        confusion_content.append(
+            dbc.Row(
+                dbc.Col(
+                    dcc.Graph(
+                        figure=create_confusion_matrix_heatmap(ls_cm, config.SENTIMENT_CLASSES, "Confusion Matrix — BiLSTM")
+                    ),
+                    md=6,
+                ),
+                className="mt-4 mb-4",
+            )
+        )
+
+    return html.Div(
+        [
+            dbc.Card(
+                dbc.CardBody(
+                    [
+                        html.H6("📈 Metrics Comparison"),
+                        html.Div(
+                            dbc.Table.from_dataframe(metrics_df, striped=True, bordered=True, hover=True),
+                            style={"overflowX": "auto"},
+                        ),
+                    ]
+                ),
+                className="mb-4",
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(dcc.Graph(figure=accuracy_fig), md=6),
+                    dbc.Col(dcc.Graph(figure=f1_fig), md=6),
+                ],
+                className="mb-4 g-3",
+            ),
+            dbc.Row(
+                dbc.Col(dcc.Graph(figure=per_class_fig), md=8),
+                className="mb-4",
+            ),
+            html.H6("🔄 Confusion Matrices", className="mt-4"),
+            *confusion_content,
+            html.Hr(),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody(
+                                [
+                                    html.H6("⚡ Fast & Interpretable"),
+                                    html.Strong("TF-IDF + Logistic Regression"),
+                                    html.Ul(
+                                        [
+                                            html.Li("Low latency"),
+                                            html.Li("Limited hardware"),
+                                            html.Li("Explainability matters"),
+                                        ]
+                                    ),
+                                ]
+                            ),
+                            className="recommendation-card",
+                        ),
+                        md=6,
+                    ),
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody(
+                                [
+                                    html.H6("🧠 Higher Accuracy"),
+                                    html.Strong("BiLSTM"),
+                                    html.Ul(
+                                        [
+                                            html.Li("Accuracy priority"),
+                                            html.Li("Word order matters"),
+                                            html.Li("Higher compute acceptable"),
+                                        ]
+                                    ),
+                                ]
+                            ),
+                            className="recommendation-card",
+                        ),
+                        md=6,
+                    ),
+                ],
+                className="g-3",
+            ),
+        ]
+    )
+
+
+@callback(
+    Output("error-output", "children"),
+    Input("model-selector", "value"),
+)
+def render_error_analysis(selected_model):
+    """Render error analysis tab."""
+    if not error_data or "models" not in error_data or not error_data["models"]:
+        return dbc.Alert(
+            "📊 No error-analysis data found. Run `python scripts/generate_model_artifacts.py`.",
+            color="info",
+        )
+
+    # Get data for first available model
+    model_key = None
+    if "logistic_regression" in error_data.get("models", {}):
+        model_key = "logistic_regression"
+        model_name = "Logistic Regression"
+    elif "bilstm" in error_data.get("models", {}):
+        model_key = "bilstm"
+        model_name = "BiLSTM"
+
+    if not model_key:
+        return dbc.Alert("⚠️ No error analysis available for any model.", color="warning")
+
+    info = error_data["models"][model_key]
+
+    # Confusion pairs table
+    pairs = info.get("top_confusion_pairs", {})
+    pairs_df = pd.DataFrame([{"Actual → Predicted": k, "Count": v} for k, v in pairs.items()])
+
+    # Misclassified examples
+    examples = info.get("misclassified_examples", [])[:20]
+    if examples:
+        ex_df = pd.DataFrame(examples)[["actual", "predicted", "confidence", "tweet"]]
+        ex_df.columns = ["Actual", "Predicted", "Confidence", "Tweet"]
+    else:
+        ex_df = pd.DataFrame()
+
+    return html.Div(
+        [
+            html.H6(f"❌ Error Analysis — {model_name}"),
+            dbc.Card(
+                dbc.CardBody(
+                    [
+                        html.H6("🔀 Most Confused Classes"),
+                        html.Div(
+                            dbc.Table.from_dataframe(pairs_df, striped=True, bordered=True, hover=True),
+                            style={"overflowX": "auto"},
+                        ),
+                    ]
+                ),
+                className="mb-4",
+            ),
+            dbc.Card(
+                dbc.CardBody(
+                    [
+                        html.H6("❌ Misclassified Examples (sample)"),
+                        html.Div(
+                            dbc.Table.from_dataframe(ex_df, striped=True, bordered=True, hover=True, size="sm")
+                            if not ex_df.empty
+                            else html.P("No misclassified examples to show."),
+                            style={"overflowX": "auto"},
+                        ),
+                    ]
+                ),
+                className="mb-4",
+            ),
+            html.Hr(),
+            html.H6("⚠️ Limitations"),
+            dbc.Alert(
+                html.Ul(
+                    [
+                        html.Li("Training dataset is airline-specific; results may not generalize."),
+                        html.Li("Neutral sentiment is the hardest class for both models (F1 ≈ 0.60)."),
+                        html.Li("Sarcasm and mixed sentiment remain challenging."),
+                        html.Li("Live Twitter/X data is not connected (X API is no longer free)."),
+                        html.Li("Live Stream tab uses simulated timestamps for demonstration."),
+                    ]
+                ),
+                color="light",
+            ),
+        ]
+    )
+
+
+@callback(
+    Output("about-output", "children"),
+    Input("model-selector", "value"),
+)
+def render_about(selected_model):
+    """Render about/methodology tab."""
+    dist = metadata.get("class_distribution", {}) if metadata else {}
+
+    dataset_info = []
+    if metadata:
+        dataset_info = [
+            create_kpi_card("Total Tweets", f"{metadata.get('dataset_size', 0):,}", "📊"),
+            create_kpi_card(
+                "Negative", f"{dist.get('negative', 0)*100:.1f}%", "😞", SENTIMENT_COLORS["negative"]
+            ),
+            create_kpi_card(
+                "Neutral", f"{dist.get('neutral', 0)*100:.1f}%", "😐", SENTIMENT_COLORS["neutral"]
+            ),
+            create_kpi_card(
+                "Positive", f"{dist.get('positive', 0)*100:.1f}%", "😊", SENTIMENT_COLORS["positive"]
+            ),
+        ]
+
+    dist_fig = None
+    if dist and metadata:
+        dist_series = pd.Series({k: v * 100 for k, v in dist.items()})
+        dist_fig = go.Figure(
+            data=[
+                go.Bar(
+                    x=dist_series.index,
+                    y=dist_series.values,
+                    marker=dict(color=[SENTIMENT_COLORS.get(c, "#334155") for c in dist_series.index]),
+                    text=dist_series.values.round(1),
+                    textposition="outside",
+                    hovertemplate="<b>%{x}</b><br>%: %{y:.1f}%<extra></extra>",
+                )
+            ]
+        )
+        dist_fig.update_layout(
+            title="Class Distribution",
+            yaxis_title="% of Dataset",
+            showlegend=False,
+            template="plotly_white",
+            height=400,
+            margin=dict(l=40, r=20, t=40, b=40),
+        )
+
+    return html.Div(
+        [
+            html.H6("📊 Dataset Statistics"),
+            dbc.Row(
+                [dbc.Col(card, md=3, className="mb-3") for card in dataset_info],
+                className="g-3 mb-4",
+            ),
+            dbc.Row(
+                dbc.Col(
+                    dcc.Graph(figure=dist_fig) if dist_fig else html.P("No data available."),
+                    md=8,
+                ),
+                className="mb-4",
+            ),
+            html.Hr(),
+            html.H6("📐 Methodology & Pipeline"),
+            dbc.Card(
+                dbc.CardBody(
+                    [
+                        html.Pre(
+                            """                              Tweet
+                                │
+                          Text Cleaning
+             (lowercase, strip URLs/mentions, lemmatize,
+                    remove stopwords, keep negations)
+                                │
+                 ┌──────────────┴──────────────┐
+                 │                              │
+             TF-IDF                       Tokenization
+        (unigrams + bigrams)               + Padding
+                 │                              │
+        Logistic Regression                Embedding(128)
+                 │                              │
+                 │                       Bidirectional LSTM(64)
+                 │                              │
+                 │                         Dense(64, ReLU)
+                 │                              │
+                 │                          Dropout(0.3)
+                 │                              │
+                 └──────────────┬───────────────┘
+                                │
+                      Dense(3, Softmax)
+                                │
+                       Sentiment (pos / neu / neg)
+                                │
+                          Dashboard (this app)""",
+                            style={
+                                "fontFamily": "monospace",
+                                "fontSize": "12px",
+                                "whiteSpace": "pre-wrap",
+                                "wordWrap": "break-word",
+                            },
+                        ),
+                        html.P(
+                            "Both models share the exact same cleaning pipeline (src/text_utils.py) "
+                            "so predictions are directly comparable.",
+                            className="mt-3",
+                        ),
+                    ]
+                ),
+                className="mb-4",
+            ),
+            html.Hr(),
+            html.H6("💡 Key Insights"),
+            dbc.Alert(
+                html.Ul(
+                    [
+                        html.Li(
+                            html.Strong("TF-IDF + Logistic Regression: "),
+                            "Fast, lightweight, and interpretable. Best for latency-sensitive applications.",
+                        ),
+                        html.Li(
+                            html.Strong("BiLSTM: "),
+                            "Captures sequential patterns and context. Higher accuracy at the cost of compute.",
+                        ),
+                        html.Li(
+                            html.Strong("Neutral Sentiment: "),
+                            "The hardest class for both models. Short, factual, or question-style tweets often lack strong sentiment cues.",
+                        ),
+                        html.Li(
+                            html.Strong("Dataset: "),
+                            "Airline-specific domain (14,640 tweets). Consider retraining on your own data for domain-specific accuracy.",
+                        ),
+                    ]
+                ),
+                color="light",
+            ),
+        ]
+    )
+
+
+# ============================================================================
+# Run the app
+# ============================================================================
+if __name__ == "__main__":
+    app.run(debug=True, host="127.0.0.1", port=8050)

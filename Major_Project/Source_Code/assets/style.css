@@ -1,0 +1,1788 @@
+/* ============================================================================
+   BrandPulse AI — Design System v2
+   ----------------------------------------------------------------------------
+   Concept: a dual-channel signal console, not a SaaS glass dashboard. The
+   product reads two "channels" (TF-IDF+LogReg vs BiLSTM) the way an
+   oscilloscope reads two probes — so those two models get real instrument
+   colors: amber (CH1) and signal-blue (CH2). Everything else stays a quiet,
+   flat, dark panel system with hairline dividers and monospace readouts,
+   so the one signature move — a live scrolling pulse trace in the header —
+   is the thing that gets noticed.
+   ============================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+/* ============================================================================
+   DESIGN TOKENS
+   ============================================================================ */
+
+:root {
+  /* ---- Core surfaces — one unified dark console, no light canvas split ---- */
+  --bg: #0E1214;
+  /* app background — deep graphite, slight blue-green cast */
+  --bg-raised: #151A1D;
+  /* sidebar / header surface */
+  --panel: #171C1F;
+  /* card / panel surface */
+  --panel-raised: #1E2427;
+  /* hovered / elevated panel */
+  --line: rgba(255, 255, 255, 0.08);
+  --line-soft: rgba(255, 255, 255, 0.05);
+  --line-strong: rgba(255, 255, 255, 0.14);
+
+  /* ---- Text ---- */
+  --ink: #EDEFEE;
+  --ink-text: #EDEFEE;
+  /* alias used by a couple of legacy selectors */
+  --ink-text-dim: #7C8589;
+  --text-primary: #EDEFEE;
+  --text-secondary: #9BA3A7;
+  --text-tertiary: #6C7478;
+
+  /* ---- Signature dual-channel accent (model identity) ----
+     CH1 amber = TF-IDF + Logistic Regression, CH2 blue = BiLSTM. Same pairing
+     an oscilloscope uses for two live probes, so the color IS the legend. */
+  --wave-a: #E3A23C;
+  --wave-a-dark: #C6862A;
+  --wave-a-wash: rgba(227, 162, 60, 0.12);
+  --wave-b: #4E8FE0;
+  --wave-b-dark: #3A72C0;
+  --wave-b-wash: rgba(78, 143, 224, 0.12);
+
+  /* Backward-compat aliases so nothing that references the old names breaks */
+  --accent-a: var(--wave-a);
+  --accent-a-dark: var(--wave-a-dark);
+  --accent-a-wash: var(--wave-a-wash);
+  --accent-b: var(--wave-b);
+  --accent-b-dark: var(--wave-b-dark);
+  --accent-b-wash: var(--wave-b-wash);
+
+  /* Primary interactive accent defaults to CH1 amber */
+  --accent: var(--wave-a);
+  --accent-hover: var(--wave-a-dark);
+  --accent-wash: var(--wave-a-wash);
+
+  /* ---- Sentiment semantics — muted, LED-style ---- */
+  --positive: #3FBF83;
+  --positive-wash: rgba(63, 191, 131, 0.12);
+  --negative: #E2596E;
+  --negative-wash: rgba(226, 89, 110, 0.12);
+  --neutral: #D9A441;
+  --neutral-wash: rgba(217, 164, 65, 0.12);
+
+  /* ---- Elevation — flat, hairline, no soft drop-glow ---- */
+  --shadow-xs: 0 1px 0 rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.45);
+  --shadow-focus: 0 0 0 3px var(--accent-wash);
+  --shadow-glow-a: 0 0 0 1px rgba(227, 162, 60, 0.25), 0 0 16px rgba(227, 162, 60, 0.18);
+  --shadow-glow-b: 0 0 0 1px rgba(78, 143, 224, 0.25), 0 0 16px rgba(78, 143, 224, 0.18);
+
+  /* ---- Spacing (compact) ---- */
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+  --space-xs: 6px;
+  --space-sm: 10px;
+  --space-md: 14px;
+  --space-lg: 20px;
+  --space-xl: 28px;
+
+  /* ---- Typography ----
+     Space Grotesk = display/headers (technical, characterful, not the usual
+     Manrope/Inter pair). IBM Plex Sans = body. IBM Plex Mono = every
+     number, timestamp, and data readout — the instrument's data font. */
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+
+  --font-size-2xs: 10.5px;
+  --font-size-xs: 11.5px;
+  --font-size-sm: 12.5px;
+  --font-size-base: 13.5px;
+  --font-size-lg: 15px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 28px;
+
+  /* ---- Radius — small and rectangular, not pill-happy ---- */
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  /* ---- Rail ---- */
+  --rail-width: 216px;
+  --header-height: 60px;
+
+  /* ---- Chart signature waveform (used by the header pulse trace) ---- */
+  --pulse-wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='140' y2='0' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23E3A23C'/%3E%3Cstop offset='0.5' stop-color='%234E8FE0'/%3E%3Cstop offset='1' stop-color='%23E3A23C'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0,22 H36 L42,7 L49,34 L55,16 L61,22 H140' fill='none' stroke='url(%23g)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+  /* Backward-compat aliases (kept so any un-migrated selector still resolves) */
+  --font-family: var(--font-body);
+  --color-primary: var(--accent);
+  --color-primary-hover: var(--accent-hover);
+  --color-success: var(--positive);
+  --color-warning: var(--neutral);
+  --color-danger: var(--negative);
+  --color-bg-primary: var(--panel);
+  --color-bg-secondary: var(--bg);
+  --color-bg-tertiary: var(--panel-raised);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-border: var(--line-strong);
+  --color-border-light: var(--line);
+
+  /* surface-* aliases: original file used these names directly in inline
+     styles and card selectors, so they stay defined and just point at the
+     new dark tokens instead of a light glass surface. */
+  --surface: var(--panel);
+  --surface-solid: var(--panel);
+  --surface-border: var(--line);
+  --surface-border-strong: var(--line-strong);
+  --canvas: var(--bg);
+}
+
+/* ============================================================================
+   ICON SYSTEM — inline SVG (feather-style), applied via mask so they inherit
+   currentColor. No external icon font / network dependency at runtime.
+   ============================================================================ */
+
+:root {
+  --icon-grid: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7' height='7'/%3E%3Crect x='14' y='3' width='7' height='7'/%3E%3Crect x='14' y='14' width='7' height='7'/%3E%3Crect x='3' y='14' width='7' height='7'/%3E%3C/svg%3E");
+  --icon-message: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 11.5a8.38 8.38 0 0 1-4.5 7.5 8.38 8.38 0 0 1-4 1 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3a8.48 8.48 0 0 1 8.5 8.5z'/%3E%3C/svg%3E");
+  --icon-upload: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3'/%3E%3Cpolyline points='16 16 12 12 8 16'/%3E%3Cline x1='12' y1='12' x2='12' y2='21'/%3E%3C/svg%3E");
+  --icon-activity: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 12 18 12 15 21 9 3 6 12 2 12'/%3E%3C/svg%3E");
+  --icon-bars: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='20' x2='18' y2='10'/%3E%3Cline x1='12' y1='20' x2='12' y2='4'/%3E%3Cline x1='6' y1='20' x2='6' y2='14'/%3E%3C/svg%3E");
+  --icon-alert: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'/%3E%3Cline x1='12' y1='9' x2='12' y2='13'/%3E%3Cline x1='12' y1='17' x2='12.01' y2='17'/%3E%3C/svg%3E");
+  --icon-info: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y1='16' x2='12' y2='11.5'/%3E%3Cline x1='12' y1='8' x2='12.01' y2='8'/%3E%3C/svg%3E");
+
+  --icon-trend: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 6 13.5 15.5 8.5 10.5 1 18'/%3E%3Cpolyline points='17 6 23 6 23 12'/%3E%3C/svg%3E");
+  --icon-smile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M8 14s1.5 2 4 2 4-2 4-2'/%3E%3Cline x1='9' y1='9' x2='9.01' y2='9'/%3E%3Cline x1='15' y1='9' x2='15.01' y2='9'/%3E%3C/svg%3E");
+  --icon-meh: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='8' y1='15' x2='16' y2='15'/%3E%3Cline x1='9' y1='9' x2='9.01' y2='9'/%3E%3Cline x1='15' y1='9' x2='15.01' y2='9'/%3E%3C/svg%3E");
+  --icon-frown: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M16 16s-1.5-2-4-2-4 2-4 2'/%3E%3Cline x1='9' y1='9' x2='9.01' y2='9'/%3E%3Cline x1='15' y1='9' x2='15.01' y2='9'/%3E%3C/svg%3E");
+  --icon-cpu: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='6' y='6' width='12' height='12' rx='1.5'/%3E%3Crect x='10' y='10' width='4' height='4'/%3E%3Cline x1='10' y1='2' x2='10' y2='6'/%3E%3Cline x1='14' y1='2' x2='14' y2='6'/%3E%3Cline x1='10' y1='18' x2='10' y2='22'/%3E%3Cline x1='14' y1='18' x2='14' y2='22'/%3E%3Cline x1='18' y1='10' x2='22' y2='10'/%3E%3Cline x1='18' y1='14' x2='22' y2='14'/%3E%3Cline x1='2' y1='10' x2='6' y2='10'/%3E%3Cline x1='2' y1='14' x2='6' y2='14'/%3E%3C/svg%3E");
+  --icon-database: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cellipse cx='12' cy='5' rx='8' ry='3'/%3E%3Cpath d='M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5'/%3E%3Cpath d='M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3'/%3E%3C/svg%3E");
+
+  --icon-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  --icon-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  --icon-sparkle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8'/%3E%3C/svg%3E");
+}
+
+.bp-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  flex-shrink: 0;
+}
+
+.icon-overview {
+  -webkit-mask-image: var(--icon-grid);
+  mask-image: var(--icon-grid);
+}
+
+.icon-predict {
+  -webkit-mask-image: var(--icon-message);
+  mask-image: var(--icon-message);
+}
+
+.icon-batch {
+  -webkit-mask-image: var(--icon-upload);
+  mask-image: var(--icon-upload);
+}
+
+.icon-live {
+  -webkit-mask-image: var(--icon-activity);
+  mask-image: var(--icon-activity);
+}
+
+.icon-comparison {
+  -webkit-mask-image: var(--icon-bars);
+  mask-image: var(--icon-bars);
+}
+
+.icon-error {
+  -webkit-mask-image: var(--icon-alert);
+  mask-image: var(--icon-alert);
+}
+
+.icon-about {
+  -webkit-mask-image: var(--icon-info);
+  mask-image: var(--icon-info);
+}
+
+.icon-total {
+  -webkit-mask-image: var(--icon-trend);
+  mask-image: var(--icon-trend);
+}
+
+.icon-positive {
+  -webkit-mask-image: var(--icon-smile);
+  mask-image: var(--icon-smile);
+}
+
+.icon-neutral {
+  -webkit-mask-image: var(--icon-meh);
+  mask-image: var(--icon-meh);
+}
+
+.icon-negative {
+  -webkit-mask-image: var(--icon-frown);
+  mask-image: var(--icon-frown);
+}
+
+.icon-model {
+  -webkit-mask-image: var(--icon-cpu);
+  mask-image: var(--icon-cpu);
+}
+
+.icon-dataset {
+  -webkit-mask-image: var(--icon-database);
+  mask-image: var(--icon-database);
+}
+
+.icon-metric {
+  -webkit-mask-image: var(--icon-sparkle);
+  mask-image: var(--icon-sparkle);
+}
+
+.icon-search {
+  -webkit-mask-image: var(--icon-search);
+  mask-image: var(--icon-search);
+}
+
+.icon-chevron {
+  -webkit-mask-image: var(--icon-chevron);
+  mask-image: var(--icon-chevron);
+}
+
+/* ============================================================================
+   GLOBAL / RESET
+   ============================================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root,
+#_dash-app-content {
+  height: 100%;
+}
+
+html,
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.5;
+  font-size: var(--font-size-base);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--accent-wash);
+  color: var(--text-primary);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* ============================================================================
+   APP SHELL — faint graph-paper graticule instead of blurred gradient blobs
+   ============================================================================ */
+
+.bp-app {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  background:
+    linear-gradient(var(--line-soft) 1px, transparent 1px) 0 0 / 100% 32px,
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px) 0 0 / 32px 100%,
+    var(--bg);
+  overflow-x: hidden;
+}
+
+/* ============================================================================
+   SIDEBAR — vertical channel-select console rail
+   ============================================================================ */
+
+.bp-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--rail-width);
+  background: var(--bg-raised);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  padding: var(--space-md) var(--space-sm);
+}
+
+.bp-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-sm) var(--space-lg) var(--space-sm);
+  margin-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.bp-brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  background: var(--panel-raised);
+  border: 1px solid var(--line-strong);
+  position: relative;
+}
+
+.bp-brand-mark::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  background: linear-gradient(135deg, var(--wave-a) 0%, var(--wave-b) 100%);
+  -webkit-mask-image: var(--icon-activity);
+  mask-image: var(--icon-activity);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.bp-brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bp-brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink-text);
+  letter-spacing: -0.1px;
+  line-height: 1.2;
+}
+
+.bp-brand-sub {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--ink-text-dim);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.bp-sidebar-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--ink-text-dim);
+  letter-spacing: 1.2px;
+  margin: var(--space-md) var(--space-sm) var(--space-xs);
+}
+
+.bp-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bp-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-text-dim);
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  text-align: left;
+  position: relative;
+}
+
+.bp-nav-item .bp-icon {
+  color: var(--ink-text-dim);
+  transition: color 0.15s ease;
+}
+
+.bp-nav-item:hover {
+  background: var(--panel);
+  color: var(--ink-text);
+}
+
+.bp-nav-item:hover .bp-icon {
+  color: var(--ink-text);
+}
+
+.bp-nav-item:active {
+  background: var(--panel-raised);
+}
+
+.bp-nav-item.active {
+  background: var(--wave-a-wash);
+  color: #FFFFFF;
+  border-left-color: var(--wave-a);
+}
+
+.bp-nav-item.active .bp-icon {
+  color: var(--wave-a);
+}
+
+.bp-nav-label {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.bp-sidebar-footer {
+  margin-top: auto;
+  padding: var(--space-md) var(--space-sm) var(--space-xs);
+  border-top: 1px solid var(--line-soft);
+}
+
+.bp-model-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bp-model-tag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-text-dim);
+}
+
+.bp-model-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.bp-model-dot.a {
+  background: var(--wave-a);
+  box-shadow: 0 0 0 3px var(--wave-a-wash);
+}
+
+.bp-model-dot.b {
+  background: var(--wave-b);
+  box-shadow: 0 0 0 3px var(--wave-b-wash);
+}
+
+/* ============================================================================
+   HEADER — instrument bar with the live pulse-trace signature
+   ============================================================================ */
+
+.bp-header {
+  position: fixed;
+  top: 0;
+  left: var(--rail-width);
+  right: 0;
+  z-index: 35;
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  background: rgba(14, 18, 20, 0.86);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.bp-header-content {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-lg);
+  gap: var(--space-md);
+}
+
+.bp-header-title {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+}
+
+.bp-header-title .bp-eyebrow {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1px;
+}
+
+/* Signature element: a continuously scrolling oscilloscope trace running
+   the width of the header — the one deliberate flourish. Pure CSS: the
+   waveform is a tileable data-URI background (see --pulse-wave) animated
+   via background-position, matching the icon system's own technique. */
+.bp-pulse-trace {
+  flex: 1;
+  min-width: 60px;
+  height: 34px;
+  margin: 0 var(--space-lg);
+  background-image: var(--pulse-wave);
+  background-repeat: repeat-x;
+  background-size: 140px 100%;
+  background-position: 0 center;
+  animation: bp-pulse-scroll 3.2s linear infinite;
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+  mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+}
+
+@keyframes bp-pulse-scroll {
+  from {
+    background-position-x: 0;
+  }
+
+  to {
+    background-position-x: -140px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-pulse-trace {
+    animation: none;
+  }
+}
+
+.bp-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.bp-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px 6px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--positive-wash);
+  border: 1px solid rgba(63, 191, 131, 0.25);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--positive);
+  white-space: nowrap;
+}
+
+.bp-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--positive);
+  animation: bp-blip 2s infinite;
+}
+
+@keyframes bp-blip {
+  0% {
+    box-shadow: 0 0 0 0 rgba(63, 191, 131, 0.55);
+  }
+
+  70% {
+    box-shadow: 0 0 0 7px rgba(63, 191, 131, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(63, 191, 131, 0);
+  }
+}
+
+.bp-model-select-wrap {
+  width: 240px;
+}
+
+/* ============================================================================
+   MAIN / CONTENT
+   ============================================================================ */
+
+.bp-main {
+  margin-left: var(--rail-width);
+  padding-top: var(--header-height);
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.bp-container {
+  width: 100%;
+}
+
+.bp-content {
+  max-width: 1320px;
+  padding: var(--space-lg) var(--space-lg) var(--space-xl);
+  margin: 0 auto;
+}
+
+.bp-page-header {
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.bp-page-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+  margin-bottom: 2px;
+}
+
+.bp-page-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* ============================================================================
+   KPI CARDS — instrument readout tiles: flat panel, left channel tick,
+   monospace value. No icon-chip bubble, no top gradient stripe.
+   ============================================================================ */
+
+.bp-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.bp-kpi-card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--text-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.bp-kpi-card.total {
+  border-left-color: var(--wave-a);
+}
+
+.bp-kpi-card.positive {
+  border-left-color: var(--positive);
+}
+
+.bp-kpi-card.neutral {
+  border-left-color: var(--neutral);
+}
+
+.bp-kpi-card.negative {
+  border-left-color: var(--negative);
+}
+
+.bp-kpi-card.model-a {
+  border-left-color: var(--wave-a);
+}
+
+.bp-kpi-card.model-b {
+  border-left-color: var(--wave-b);
+}
+
+.bp-kpi-card:hover {
+  background: var(--panel-raised);
+  transform: translateY(-1px);
+}
+
+.bp-kpi-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-sm);
+  background: var(--panel-raised);
+  color: var(--text-secondary);
+}
+
+.bp-kpi-card.total .bp-kpi-icon {
+  color: var(--wave-a);
+}
+
+.bp-kpi-card.positive .bp-kpi-icon {
+  color: var(--positive);
+}
+
+.bp-kpi-card.neutral .bp-kpi-icon {
+  color: var(--neutral);
+}
+
+.bp-kpi-card.negative .bp-kpi-icon {
+  color: var(--negative);
+}
+
+.bp-kpi-card.model-a .bp-kpi-icon {
+  color: var(--wave-a);
+}
+
+.bp-kpi-card.model-b .bp-kpi-icon {
+  color: var(--wave-b);
+}
+
+.bp-kpi-icon .bp-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.bp-kpi-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  letter-spacing: 0.7px;
+  margin-bottom: 4px;
+}
+
+.bp-kpi-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 23px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+  line-height: 1.15;
+}
+
+.bp-kpi-value.positive {
+  color: var(--positive);
+}
+
+.bp-kpi-value.negative {
+  color: var(--negative);
+}
+
+.bp-kpi-value.neutral {
+  color: var(--neutral);
+}
+
+.bp-kpi-subtext {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-sm);
+}
+
+/* ============================================================================
+   CHARTS
+   ============================================================================ */
+
+.bp-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+@media (max-width: 1024px) {
+  .bp-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bp-chart-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  transition: border-color 0.15s ease;
+}
+
+.bp-chart-card:hover {
+  border-color: var(--line-strong);
+}
+
+.bp-chart-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--line);
+  letter-spacing: -0.1px;
+}
+
+.bp-chart-container {
+  min-height: 250px;
+}
+
+/* ============================================================================
+   FORMS & INPUTS
+   ============================================================================ */
+
+.bp-form-group {
+  margin-bottom: var(--space-lg);
+}
+
+.bp-form-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: var(--space-xs);
+}
+
+.bp-form-control,
+.bp-form-select {
+  width: 100%;
+  padding: 9px var(--space-md);
+  font-size: var(--font-size-base);
+  font-family: var(--font-body);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-primary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bp-form-control::placeholder {
+  color: var(--text-tertiary);
+}
+
+.bp-form-control:focus,
+.bp-form-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.bp-textarea {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  resize: vertical;
+  min-height: 110px;
+  line-height: 1.6;
+}
+
+/* Model selector dropdown — dark rectangular readout selector */
+.bp-model-select-wrap .Select-control,
+.bp-model-select-wrap .dash-dropdown .Select-control {
+  border-radius: var(--radius-sm) !important;
+}
+
+.bp-model-select-wrap div[class*="-control"] {
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--line-strong) !important;
+  background: var(--panel) !important;
+  min-height: 34px !important;
+  box-shadow: none !important;
+}
+
+.bp-model-select-wrap div[class*="-control"]:hover {
+  border-color: var(--accent) !important;
+}
+
+.bp-model-select-wrap div[class*="-ValueContainer"] {
+  padding-left: 14px !important;
+  font-family: var(--font-mono) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: var(--text-primary) !important;
+}
+
+.bp-model-select-wrap div[class*="-singleValue"] {
+  color: var(--text-primary) !important;
+}
+
+.bp-model-select-wrap div[class*="-Input"] input {
+  color: var(--text-primary) !important;
+}
+
+.bp-model-select-wrap div[class*="-menu"] {
+  border-radius: var(--radius-md) !important;
+  overflow: hidden;
+  background: var(--panel-raised) !important;
+  border: 1px solid var(--line-strong) !important;
+  box-shadow: var(--shadow-lg) !important;
+  margin-top: 6px !important;
+}
+
+.bp-model-select-wrap div[class*="-option"] {
+  background: var(--panel-raised) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 12px !important;
+}
+
+.bp-model-select-wrap div[class*="-option"]:hover,
+.bp-model-select-wrap div[class*="-option"][class*="isFocused"] {
+  background: var(--wave-a-wash) !important;
+}
+
+/* rc-slider (dcc.Slider) — recolored to the CH1 amber accent */
+.rc-slider-track {
+  background: var(--accent) !important;
+}
+
+.rc-slider-rail {
+  background: var(--line-strong) !important;
+}
+
+.rc-slider-handle {
+  border-color: var(--accent) !important;
+  background: var(--panel) !important;
+  opacity: 1 !important;
+}
+
+.rc-slider-handle:hover,
+.rc-slider-handle:focus {
+  border-color: var(--accent-hover) !important;
+  box-shadow: var(--shadow-focus) !important;
+}
+
+.rc-slider-dot {
+  border-color: var(--line-strong) !important;
+  background: var(--bg) !important;
+}
+
+.rc-slider-dot-active {
+  border-color: var(--accent) !important;
+}
+
+.rc-slider-mark-text {
+  color: var(--text-tertiary) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 10.5px !important;
+}
+
+.rc-slider-tooltip-inner {
+  background: var(--panel-raised) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-mono) !important;
+  border: 1px solid var(--line-strong) !important;
+  box-shadow: none !important;
+}
+
+/* ============================================================================
+   BUTTONS — rectangular, uppercase mono label, tactile console feel
+   ============================================================================ */
+
+.bp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 18px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.18s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+.bp-button-primary {
+  background: var(--wave-a);
+  color: #14100A;
+  box-shadow: var(--shadow-glow-a);
+}
+
+.bp-button-primary:hover {
+  background: var(--wave-a-dark);
+}
+
+.bp-button-primary:active {
+  transform: translateY(1px);
+}
+
+.bp-button-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.bp-button-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--line-strong);
+}
+
+.bp-button-secondary:hover {
+  background: var(--panel-raised);
+  border-color: var(--text-tertiary);
+}
+
+.bp-button-block {
+  width: 100%;
+}
+
+/* ============================================================================
+   SENTIMENT BADGES & PROBABILITY / CONFIDENCE METERS
+   ============================================================================ */
+
+.bp-sentiment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid transparent;
+}
+
+.bp-sentiment-badge.positive {
+  background: var(--positive-wash);
+  color: var(--positive);
+  border-color: rgba(63, 191, 131, 0.3);
+}
+
+.bp-sentiment-badge.negative {
+  background: var(--negative-wash);
+  color: var(--negative);
+  border-color: rgba(226, 89, 110, 0.3);
+}
+
+.bp-sentiment-badge.neutral {
+  background: var(--neutral-wash);
+  color: var(--neutral);
+  border-color: rgba(217, 164, 65, 0.3);
+}
+
+.bp-confidence-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.bp-confidence-label {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  min-width: 80px;
+}
+
+.bp-confidence-track {
+  flex: 1;
+  height: 6px;
+  background: var(--line-strong);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+/* Segmented "signal meter" fill instead of a plain gradient bar — small
+   repeating notches read as a level meter rather than a progress bar. */
+.bp-confidence-fill {
+  height: 100%;
+  background-image: repeating-linear-gradient(90deg, var(--accent) 0, var(--accent) 6px, rgba(0, 0, 0, 0.35) 6px, rgba(0, 0, 0, 0.35) 8px);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.bp-confidence-value {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 45px;
+  text-align: right;
+}
+
+/* ============================================================================
+   CARDS & PANELS
+   ============================================================================ */
+
+.bp-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.bp-card-header {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.bp-card-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.bp-card-subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: var(--space-sm);
+}
+
+.bp-card-content {
+  color: var(--text-secondary);
+  line-height: 1.65;
+  font-size: var(--font-size-base);
+}
+
+/* Model comparison cards get a left channel-tick matching their identity,
+   consistent with the KPI tiles rather than a top stripe. */
+.bp-model-card {
+  position: relative;
+  border-left-width: 3px;
+  border-left-style: solid;
+}
+
+.bp-model-card.model-a {
+  border-left-color: var(--wave-a);
+}
+
+.bp-model-card.model-b {
+  border-left-color: var(--wave-b);
+}
+
+.bp-model-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+}
+
+.bp-model-card-title .bp-model-dot {
+  width: 9px;
+  height: 9px;
+}
+
+/* ============================================================================
+   ALERTS
+   ============================================================================ */
+
+.bp-alert {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  border-left: 3px solid;
+  line-height: 1.55;
+  background: var(--panel);
+}
+
+.bp-alert-info {
+  border-left-color: var(--wave-b);
+  color: var(--text-secondary);
+}
+
+.bp-alert-success {
+  border-left-color: var(--positive);
+  color: var(--text-secondary);
+}
+
+.bp-alert-warning {
+  border-left-color: var(--neutral);
+  color: var(--text-secondary);
+}
+
+.bp-alert-danger {
+  border-left-color: var(--negative);
+  color: var(--text-secondary);
+}
+
+/* ============================================================================
+   TABLES
+   ============================================================================ */
+
+.bp-table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+}
+
+.bp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.bp-table thead {
+  background: var(--bg-raised);
+}
+
+.bp-table th {
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-size: var(--font-size-2xs);
+  letter-spacing: 0.6px;
+}
+
+.bp-table td {
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--line);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.bp-table tbody tr:hover {
+  background: var(--panel-raised);
+}
+
+/* ============================================================================
+   EMPTY / LOADING STATES
+   ============================================================================ */
+
+.bp-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+  background: var(--panel);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl) var(--space-lg);
+}
+
+.bp-empty-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--wave-a-wash);
+  margin-bottom: 4px;
+  color: var(--wave-a);
+}
+
+.bp-empty-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+}
+
+.bp-empty-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  max-width: 360px;
+  line-height: 1.55;
+}
+
+/* Skeleton shimmer, used for custom loading placeholders */
+.bp-skeleton {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--panel) 25%, var(--panel-raised) 37%, var(--panel) 63%);
+  background-size: 400% 100%;
+  animation: bp-shimmer 1.4s ease infinite;
+}
+
+@keyframes bp-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+.bp-skeleton-card {
+  height: 84px;
+  margin-bottom: var(--space-md);
+}
+
+.bp-skeleton-line {
+  height: 12px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.bp-skeleton-line.short {
+  width: 55%;
+}
+
+/* Recolor Dash's built-in dcc.Loading spinner/backdrop to match the system */
+._dash-loading-callback,
+.dash-spinner-container {
+  background: transparent !important;
+}
+
+._dash-loading {
+  color: var(--accent) !important;
+}
+
+.dash-spinner {
+  border-color: var(--accent-wash) !important;
+  border-top-color: var(--accent) !important;
+}
+
+/* ============================================================================
+   TABS (legacy utility, kept for compatibility)
+   ============================================================================ */
+
+.bp-tabs {
+  display: flex;
+  gap: var(--space-lg);
+  border-bottom: 1px solid var(--line-strong);
+  margin-bottom: var(--space-lg);
+}
+
+.bp-tab {
+  padding: var(--space-md) var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bp-tab:hover {
+  color: var(--text-primary);
+}
+
+.bp-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ============================================================================
+   FOOTER
+   ============================================================================ */
+
+.bp-footer {
+  border-top: 1px solid var(--line);
+  padding: var(--space-lg);
+  margin-top: var(--space-xl);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+/* ============================================================================
+   UPLOAD ZONE
+   ============================================================================ */
+
+.bp-upload-zone {
+  border: 1.5px dashed var(--line-strong) !important;
+  border-radius: var(--radius-md) !important;
+  background: rgba(227, 162, 60, 0.03);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.bp-upload-zone:hover {
+  border-color: var(--accent) !important;
+  background: var(--accent-wash);
+}
+
+.bp-upload-inner {
+  text-align: center;
+  padding: 34px 20px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 1024px) {
+  :root {
+    --rail-width: 0px;
+  }
+
+  /* Header/sidebar/main are direct flex children of .bp-app. At desktop
+     size both header and sidebar are position:fixed (out of flow), so
+     .bp-main is the only flow child and flex-direction never mattered.
+     Here sidebar and header both go back into flow (static), so without
+     column direction they'd sit side-by-side in a row instead of stacking
+     top-to-bottom — this is what actually stacks them correctly. */
+  .bp-app {
+    flex-direction: column;
+  }
+
+  .bp-header {
+    position: static;
+    left: auto;
+    right: auto;
+  }
+
+  .bp-sidebar {
+    position: static;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--space-sm);
+    overflow-x: auto;
+  }
+
+  .bp-brand {
+    border-bottom: none;
+    padding: var(--space-xs);
+    margin-bottom: 0;
+  }
+
+  .bp-sidebar-title {
+    display: none;
+  }
+
+  .bp-nav {
+    flex-direction: row;
+  }
+
+  .bp-nav-item.active {
+    border-left-color: transparent;
+    border-bottom: 2px solid var(--wave-a);
+  }
+
+  .bp-sidebar-footer {
+    display: none;
+  }
+
+  .bp-main {
+    margin-left: 0;
+    padding-top: 0;
+  }
+
+  .bp-app {
+    background-size: 24px 24px, 24px 24px, auto;
+  }
+
+  .bp-kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+
+  .bp-pulse-trace {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .bp-content {
+    padding: var(--space-md);
+  }
+
+  .bp-header-content {
+    padding: 0 var(--space-md);
+  }
+
+  .bp-page-title {
+    font-size: var(--font-size-xl);
+  }
+
+  .bp-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bp-charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bp-button {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-sm);
+  }
+
+  .bp-model-select-wrap {
+    width: 160px;
+  }
+
+  .bp-header-title .bp-eyebrow {
+    display: none;
+  }
+}
+
+/* ============================================================================
+   SPLIT LAYOUT — input card + persistent results panel, side by side
+   ============================================================================ */
+
+.bp-split-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  align-items: start;
+  gap: var(--space-md);
+}
+
+@media (max-width: 900px) {
+  .bp-split-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bp-hint-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--line);
+}
+
+.bp-hint-text {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ============================================================================
+   PLOTLY CHART CUSTOMIZATION
+   ============================================================================ */
+
+.plotly-graph-div {
+  background: transparent !important;
+}
+
+.plotly-graph-div .modebar {
+  background: transparent !important;
+}
+
+.plotly-graph-div .plotly-graph-container {
+  background: transparent !important;
+}
+
+/* ============================================================================
+   PAGE TRANSITIONS
+   ============================================================================ */
+
+/* Tabs are pre-rendered (clientside display toggle, no server round-trip) —
+   content is already painted the instant you click. A 220ms fade here was
+   pure added wait with nothing happening underneath it. Cut to a near-zero
+   opacity snap so switching reads as instant, not stripped of all feedback. */
+.bp-page-enter-a,
+.bp-page-enter-b {
+  animation: bp-page-fade-in 0.06s linear both;
+}
+
+@keyframes bp-page-fade-in {
+  from {
+    opacity: 0.4;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .bp-page-enter-a,
+  .bp-page-enter-b {
+    animation: none;
+  }
+}
+
+/* ============================================================================
+   MODEL COMPARISON — dedicated chart grid + trade-off insight panel
+   ============================================================================ */
+
+.bp-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.bp-compare-grid .bp-chart-card {
+  display: flex;
+  flex-direction: column;
+  /* All four comparison cards get a fixed, identical height (matching the
+     "Accuracy / Macro F1 / Weighted F1" card) instead of sizing to their
+     own figure's height. Individual charts no longer set mismatched
+     heights that push content past the card border. */
+  height: 260px;
+  overflow: hidden;
+}
+
+.bp-compare-grid .bp-chart-card .bp-chart-title {
+  flex: 0 0 auto;
+}
+
+/* The Graph's wrapping div and Plotly's own div both need to fill the
+   remaining card height, or the figure keeps its own fixed pixel height
+   and either leaves empty space or spills past the card edge. */
+.bp-compare-grid .bp-chart-card>div:last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.bp-compare-grid .bp-chart-card .dash-graph,
+.bp-compare-grid .bp-chart-card .js-plotly-plot,
+.bp-compare-grid .bp-chart-card .plotly-graph-div {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+@media (max-width: 1024px) {
+  .bp-compare-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bp-compare-grid .bp-chart-card {
+    height: 240px;
+  }
+}
+
+.bp-insight-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.bp-insight-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.bp-insight-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.bp-insight-columns {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+
+@media (max-width: 900px) {
+  .bp-insight-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bp-insight-col {
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  border: 1px solid var(--line);
+}
+
+.bp-insight-col.model-a {
+  background: var(--wave-a-wash);
+  border-color: rgba(227, 162, 60, 0.25);
+}
+
+.bp-insight-col.model-b {
+  background: var(--wave-b-wash);
+  border-color: rgba(78, 143, 224, 0.25);
+}
+
+.bp-insight-col-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.bp-insight-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+
+.bp-insight-list li {
+  margin-bottom: 4px;
+}
+
+.bp-insight-verdict {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--line);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.bp-insight-verdict strong {
+  color: var(--text-primary);
+}
