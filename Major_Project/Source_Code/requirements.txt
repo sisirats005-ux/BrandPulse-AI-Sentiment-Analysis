@@ -8,7 +8,6 @@ scipy>=1.10
 nltk>=3.8
 
 # Deep learning (LSTM)
-tensorflow>=2.13
 
 # Dashboard & visualization (Plotly Dash)
 dash>=2.14

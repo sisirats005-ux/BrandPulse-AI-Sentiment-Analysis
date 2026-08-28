@@ -59,7 +59,7 @@ app.title = "BrandPulse AI"
 # Load models & data once on startup
 # ============================================================================
 logreg_model, tfidf_vec = load_logreg()
-lstm_model, lstm_tok, lstm_cfg = load_lstm()
+lstm_model, lstm_tok, lstm_cfg = None, None, None
 metadata = load_model_metadata()
 error_data = load_error_analysis()
 
